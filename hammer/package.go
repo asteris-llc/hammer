@@ -3,6 +3,7 @@ package hammer
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
@@ -36,6 +37,9 @@ type Package struct {
 	Resources   []Resource `yaml:"resources"`
 	Targets     []Target   `yaml:"targets"`
 	Scripts     Scripts    `yaml:"scripts"`
+
+	// target-specific options // TODO: add deb, etc
+	RPM map[string]string `yaml:"rpm"`
 
 	// internal state
 	BuildRoot  string `yaml:"-"`
@@ -135,15 +139,18 @@ func (p *Package) Render(in string) (bytes.Buffer, error) {
 
 func (p *Package) Package(args []string, pkgType string) ([]byte, error) {
 	logger := p.logger.WithField("type", pkgType)
+	logger.Info("packaging with FPM")
+
 	// prepend source and dest arguments
 	prefixArgs := []string{
 		"-s", "dir",
 		"-t", pkgType,
 		"-p", p.OutputRoot,
 	}
+	prefixArgs = append(prefixArgs, p.typeArgs(pkgType)...)
 	args = append(prefixArgs, args...)
 
-	logger.Info("packaging with FPM")
+	logrus.WithField("args", args).Debug("running FPM with args")
 	fpm := exec.Command("fpm", args...)
 	out, err := fpm.CombinedOutput()
 
@@ -158,6 +165,40 @@ func (p *Package) Package(args []string, pkgType string) ([]byte, error) {
 	}).Debug("package command exited")
 
 	return out, err
+}
+
+func (p *Package) typeArgs(t string) []string {
+	args := []string{}
+
+	var (
+		prefix string
+		argMap map[string]string
+	)
+
+	switch t {
+	case "rpm":
+		prefix = "rpm"
+		argMap = p.RPM
+	}
+
+	for key, value := range argMap {
+		args = append(
+			args,
+			fmt.Sprintf("--%s-%s", prefix, key),
+			value,
+		)
+	}
+
+	// specific fixes for different output types
+	switch t {
+	case "rpm":
+		args = append(
+			args,
+			"--rpm-auto-add-directories", // TODO: document this somewhere
+		)
+	}
+
+	return args
 }
 
 func (p *Package) fpmArgs() ([]string, error) {
@@ -279,6 +320,8 @@ func (p *Package) fpmArgs() ([]string, error) {
 		scriptLogger.Debug("wrote script")
 		args = append(args, "--"+name, loc)
 	}
+
+	// TODO: --config-files
 
 	for i, target := range p.Targets {
 		// TODO: template source content
