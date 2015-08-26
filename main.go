@@ -22,6 +22,9 @@ var (
 			packager := hammer.NewPackager(packages)
 			packager.Build()
 		},
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			setupLogging()
+		},
 	}
 )
 
@@ -38,9 +41,14 @@ func init() {
 	RootCmd.PersistentFlags().String("search", cwd, "where to look for package definitions")
 	RootCmd.PersistentFlags().String("cache", cwd+"/.hammer-cache", "where to cache downloaded files")
 
-	viper.BindPFlags(RootCmd.PersistentFlags())
+	err = viper.BindPFlags(RootCmd.PersistentFlags())
+	if err != nil {
+		logrus.WithField("error", err).Error("could not bind flags")
+		os.Exit(1)
+	}
+}
 
-	// initialize logging
+func setupLogging() {
 	switch viper.GetString("log-level") {
 	case "debug":
 		logrus.SetLevel(logrus.DebugLevel)
@@ -53,12 +61,9 @@ func init() {
 	case "fatal":
 		logrus.SetLevel(logrus.FatalLevel)
 	default:
-		logrus.WithField("log-format", viper.GetString("log-format")).Warning("invalid log level. defaulting to info.")
+		logrus.WithField("log-level", viper.GetString("log-level")).Warning("invalid log level. defaulting to info.")
 		logrus.SetLevel(logrus.InfoLevel)
 	}
-
-	// override this for now, for debugging purposes
-	logrus.SetLevel(logrus.DebugLevel)
 
 	switch viper.GetString("log-format") {
 	case "text":
