@@ -34,9 +34,13 @@ func (s *Resource) Download(p *Package) ([]byte, error) {
 	logger.Info("getting resource")
 
 	url, err := p.Render(s.URL)
+	if err != nil {
+		logger.WithField("error", err).Error("could not render URL string as a template")
+		return nil, err
+	}
 
 	client := http.Client{} // TODO: caching of some kind?
-	resp, err := client.Get(s.URL)
+	resp, err := client.Get(url.String())
 	if err != nil {
 		logger.WithField("error", err).Error("could not complete request")
 		return nil, err
