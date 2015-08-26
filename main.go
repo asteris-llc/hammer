@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"os"
 	"path"
+	"strings"
 )
 
 var (
@@ -27,6 +28,16 @@ var (
 				logrus.WithField("error", err).Fatal("could not create output directory")
 			}
 
+			only := viper.GetString("only")
+			if only != "" {
+				packager.Only(strings.Split(only, ","))
+			}
+
+			exclude := viper.GetString("exclude")
+			if exclude != "" {
+				packager.Exclude(strings.Split(exclude, ","))
+			}
+
 			if !packager.Build() { // Errors are already reported to the user from here
 				os.Exit(1)
 			}
@@ -43,6 +54,8 @@ func init() {
 	RootCmd.PersistentFlags().String("log-format", "text", "specify output (text or json)")
 	RootCmd.PersistentFlags().String("shell", "bash", "shell to use for executing build scripts")
 	RootCmd.PersistentFlags().String("type", "rpm", "type of package to build (flag can be repeated)")
+	RootCmd.PersistentFlags().String("only", "", "only build named packages")
+	RootCmd.PersistentFlags().String("exclude", "", "exclude named packages")
 
 	cwd, err := os.Getwd()
 	if err != nil {
