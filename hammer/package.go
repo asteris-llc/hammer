@@ -25,18 +25,19 @@ type Target struct {
 }
 
 type Package struct {
-	Name        string     `yaml:"name"`
-	Version     string     `yaml:"version"`
-	Iteration   string     `yaml:"iteration"`
-	Epoch       string     `yaml:"epoch"`
-	License     string     `yaml:"license"`
-	Vendor      string     `yaml:"vendor"`
-	URL         string     `yaml:"url"`
-	Description string     `yaml:"description"`
-	Depends     []string   `yaml:"depends"`
-	Resources   []Resource `yaml:"resources"`
-	Targets     []Target   `yaml:"targets"`
-	Scripts     Scripts    `yaml:"scripts"`
+	Name         string     `yaml:"name"`
+	Version      string     `yaml:"version"`
+	Iteration    string     `yaml:"iteration"`
+	Epoch        string     `yaml:"epoch"`
+	License      string     `yaml:"license"`
+	Vendor       string     `yaml:"vendor"`
+	URL          string     `yaml:"url"`
+	Description  string     `yaml:"description"`
+	Architecture string     `yaml:"architecture"`
+	Depends      []string   `yaml:"depends"`
+	Resources    []Resource `yaml:"resources"`
+	Targets      []Target   `yaml:"targets"`
+	Scripts      Scripts    `yaml:"scripts"`
 
 	// target-specific options // TODO: add deb, etc
 	RPM map[string]string `yaml:"rpm"`
@@ -281,6 +282,16 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	for _, depend := range p.Depends {
 		args = append(args, "--depends", depend)
+	}
+
+	// architecture
+	if p.Architecture != "" {
+		architecture, err := p.Render(p.Architecture)
+		if err != nil {
+			p.logger.WithField("error", err).Error("failed to render architecture as template")
+			return args, err
+		}
+		args = append(args, "--architecture", architecture.String())
 	}
 
 	scriptDir, err := ioutil.TempDir("", "hammer-scripts-"+p.Name)
