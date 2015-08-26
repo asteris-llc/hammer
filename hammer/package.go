@@ -280,9 +280,8 @@ func (p *Package) fpmArgs() ([]string, error) {
 	}
 
 	for _, depend := range p.Depends {
-		args = append(args, "--depend", depend)
+		args = append(args, "--depends", depend)
 	}
-	// TODO: --config-files
 
 	scriptDir, err := ioutil.TempDir("", "hammer-scripts-"+p.Name)
 	if err != nil {
