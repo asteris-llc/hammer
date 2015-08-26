@@ -24,13 +24,13 @@ func (l *Loader) Load() ([]*Package, error) {
 	logrus.WithField("root", l.Root).Info("loading packages")
 	packages := []*Package{}
 
-	err := filepath.Walk(l.Root, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(l.Root, func(pathName string, info os.FileInfo, err error) error {
 		if info.IsDir() || info.Name() != l.Indicator {
 			return nil
 		}
 
-		logrus.WithField("path", path).Debug("loading package")
-		content, err := ioutil.ReadFile(path)
+		logrus.WithField("path", pathName).Debug("loading package")
+		content, err := ioutil.ReadFile(pathName)
 		if err != nil {
 			return err
 		}
@@ -38,11 +38,12 @@ func (l *Loader) Load() ([]*Package, error) {
 		pkg, err := NewPackageFromYAML(content)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
-				"path":  path,
+				"path":  pathName,
 				"error": err,
 			}).Warning("could not load package, skipping")
 			return nil
 		}
+		path, _ := filepath.Split(pathName)
 		pkg.Root = path
 		pkg.OutputRoot = viper.GetString("output")
 
