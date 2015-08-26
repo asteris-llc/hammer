@@ -22,17 +22,23 @@ func (p *Packager) EnsureOutputDir(path string) error {
 	return nil
 }
 
-func (p *Packager) Build() error {
+func (p *Packager) Build() (success bool) {
 	wg := new(sync.WaitGroup)
 	wg.Add(len(p.packages))
+	success = true
 
 	for _, pkg := range p.packages {
 		go func(pkg *Package) {
-			pkg.Build()
+			// pkg.Build() is responsible for reporting errors to the user, so we just
+			// need to check if there's an error and
+			err := pkg.Build()
+			if err != nil {
+				success = false
+			}
 			wg.Done()
 		}(pkg)
 	}
 
 	wg.Wait()
-	return nil
+	return
 }

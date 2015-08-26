@@ -27,7 +27,9 @@ var (
 				logrus.WithField("error", err).Fatal("could not create output directory")
 			}
 
-			packager.Build()
+			if !packager.Build() { // Errors are already reported to the user from here
+				os.Exit(1)
+			}
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			setupLogging()

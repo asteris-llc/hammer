@@ -91,8 +91,8 @@ func (p *Package) Build() error {
 		}
 
 		if matched {
-			p.logger.WithField("name", file.Name()).Error("found conflicting output file - not building to avoid overwrite")
-			return errors.New("conflicting output file name")
+			p.logger.WithField("name", file.Name()).Warn("found conflicting output file - not building to avoid overwrite")
+			return nil // TODO: does this make sense? It's not really a failure condition.
 		}
 	}
 
