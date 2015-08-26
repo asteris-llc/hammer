@@ -14,7 +14,7 @@ func NewPackager(pkgs []*Package) *Packager {
 }
 
 func (p *Packager) EnsureOutputDir(path string) error {
-	err := os.MkdirAll(path, os.ModeDir|0644)
+	err := os.MkdirAll(path, os.ModeDir|0777)
 	if err != nil {
 		return err
 	}

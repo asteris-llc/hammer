@@ -3,12 +3,14 @@ package hammer
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"text/template"
 )
 
@@ -67,6 +69,34 @@ func (p *Package) Cleanup() error {
 }
 
 func (p *Package) Build() error {
+	// check for existing package
+	nameGlob := fmt.Sprintf("%s-%s-%s.*", p.Name, p.Version, p.Iteration)
+	files, err := ioutil.ReadDir(p.OutputRoot)
+	if err != nil {
+		p.logger.WithField("error", err).Error("could not read output directory")
+		return err
+	}
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		matched, err := filepath.Match(nameGlob, file.Name())
+
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"name":  file.Name(),
+				"glob":  nameGlob,
+				"error": err,
+			}).Error("could not match")
+		}
+
+		if matched {
+			p.logger.WithField("name", file.Name()).Error("found conflicting output file - not building to avoid overwrite")
+			return errors.New("conflicting output file name")
+		}
+	}
+
+	// create temporary directory for building
 	buildDir, err := ioutil.TempDir("", "hammer-"+p.Name)
 	defer os.Remove(buildDir)
 	if err != nil {
@@ -129,7 +159,12 @@ func (p *Package) Package() ([]byte, error) {
 	}
 
 	// prepend source and dest arguments
-	args = append([]string{"-s", "dir", "-t", "rpm"}, args...) // TODO: make this do any type of packaging supported by FPM
+	prefixArgs := []string{
+		"-s", "dir",
+		"-t", "rpm",
+		"-p", p.OutputRoot,
+	}
+	args = append(prefixArgs, args...) // TODO: make this do any type of packaging supported by FPM
 
 	p.logger.Info("packaging with FPM")
 	fpm := exec.Command("fpm", args...)
