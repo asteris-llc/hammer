@@ -36,8 +36,9 @@ type Package struct {
 	Scripts     Scripts    `yaml:"scripts"`
 
 	// internal state
-	Root       string `yaml:"-"`
 	BuildRoot  string `yaml:"-"`
+	OutputRoot string `yaml:"-"`
+	Root       string `yaml:"-"`
 	ScriptRoot string `yaml:"-"`
 	logger     *logrus.Entry
 }

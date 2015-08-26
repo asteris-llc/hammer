@@ -1,6 +1,7 @@
 package hammer
 
 import (
+	"os"
 	"sync"
 )
 
@@ -10,6 +11,15 @@ type Packager struct {
 
 func NewPackager(pkgs []*Package) *Packager {
 	return &Packager{pkgs}
+}
+
+func (p *Packager) EnsureOutputDir(path string) error {
+	err := os.MkdirAll(path, os.ModeDir|0644)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (p *Packager) Build() error {

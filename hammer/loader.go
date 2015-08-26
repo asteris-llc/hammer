@@ -2,6 +2,7 @@ package hammer
 
 import (
 	"github.com/Sirupsen/logrus"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -42,7 +43,8 @@ func (l *Loader) Load() ([]*Package, error) {
 			}).Warning("could not load package, skipping")
 			return nil
 		}
-		// pkg.Root = path
+		pkg.Root = path
+		pkg.OutputRoot = viper.GetString("output")
 
 		packages = append(packages, pkg)
 

@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
+	"path"
 )
 
 var (
@@ -20,6 +21,12 @@ var (
 			}
 
 			packager := hammer.NewPackager(packages)
+
+			err = packager.EnsureOutputDir(viper.GetString("output"))
+			if err != nil {
+				logrus.WithField("error", err).Fatal("could not create output directory")
+			}
+
 			packager.Build()
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -39,7 +46,8 @@ func init() {
 		logrus.WithField("error", err).Warning("could not get working directory")
 	}
 	RootCmd.PersistentFlags().String("search", cwd, "where to look for package definitions")
-	RootCmd.PersistentFlags().String("cache", cwd+"/.hammer-cache", "where to cache downloaded files")
+	RootCmd.PersistentFlags().String("cache", path.Join(cwd, ".hammer-cache"), "where to cache downloaded files")
+	RootCmd.PersistentFlags().String("output", path.Join(cwd, "out"), "where to place output packages")
 
 	err = viper.BindPFlags(RootCmd.PersistentFlags())
 	if err != nil {
