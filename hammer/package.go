@@ -281,9 +281,10 @@ func (p *Package) fpmArgs() ([]string, error) {
 	}
 
 	for i, target := range p.Targets {
+		// TODO: template source content
 		src, err := p.Render(target.Src)
 		if err != nil {
-			p.logger.WithField("index", i).Error("error templating target source")
+			p.logger.WithField("index", i).Error("error templating target source name")
 			return args, err
 		}
 
