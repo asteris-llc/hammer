@@ -76,7 +76,7 @@ func (p *Package) Build() error {
 
 	// get the sources and store them in the temporary directory
 	for _, s := range p.Resources {
-		body, err := s.Download()
+		body, err := s.Download(p)
 		if err != nil {
 			return err
 		}

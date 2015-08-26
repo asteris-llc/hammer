@@ -29,9 +29,11 @@ func (s *Resource) Name() string {
 	return name
 }
 
-func (s *Resource) Download() ([]byte, error) {
-	logger := logrus.WithField("name", s.Name())
+func (s *Resource) Download(p *Package) ([]byte, error) {
+	logger := p.logger.WithField("resource", s.Name())
 	logger.Info("getting resource")
+
+	url, err := p.Render(s.URL)
 
 	client := http.Client{} // TODO: caching of some kind?
 	resp, err := client.Get(s.URL)
