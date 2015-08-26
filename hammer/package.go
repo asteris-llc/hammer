@@ -3,14 +3,14 @@ package hammer
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
+	"strings"
 	"text/template"
 )
 
@@ -69,33 +69,6 @@ func (p *Package) Cleanup() error {
 }
 
 func (p *Package) Build() error {
-	// check for existing package
-	nameGlob := fmt.Sprintf("%s-%s-%s.*", p.Name, p.Version, p.Iteration)
-	files, err := ioutil.ReadDir(p.OutputRoot)
-	if err != nil {
-		p.logger.WithField("error", err).Error("could not read output directory")
-		return err
-	}
-	for _, file := range files {
-		if file.IsDir() {
-			continue
-		}
-		matched, err := filepath.Match(nameGlob, file.Name())
-
-		if err != nil {
-			p.logger.WithFields(logrus.Fields{
-				"name":  file.Name(),
-				"glob":  nameGlob,
-				"error": err,
-			}).Error("could not match")
-		}
-
-		if matched {
-			p.logger.WithField("name", file.Name()).Warn("found conflicting output file - not building to avoid overwrite")
-			return nil // TODO: does this make sense? It's not really a failure condition.
-		}
-	}
-
 	// create temporary directory for building
 	buildDir, err := ioutil.TempDir("", "hammer-"+p.Name)
 	defer os.Remove(buildDir)
@@ -129,13 +102,21 @@ func (p *Package) Build() error {
 	}
 
 	// package the results of the build
-	out, err = p.Package()
+	fpmArgs, err := p.fpmArgs()
 	if err != nil {
-		p.logger.WithFields(logrus.Fields{
-			"error": err,
-			"out":   string(out),
-		}).Error("failed to package")
+		p.logger.WithField("error", err).Error("failed to get package args")
 		return err
+	}
+
+	for _, outType := range strings.Split(viper.GetString("type"), ",") {
+		out, err = p.Package(fpmArgs, outType)
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"out":   string(out),
+			}).Error("failed to package")
+			return err
+		}
 	}
 
 	return p.Cleanup()
@@ -152,21 +133,17 @@ func (p *Package) Render(in string) (bytes.Buffer, error) {
 	return buf, err
 }
 
-func (p *Package) Package() ([]byte, error) {
-	args, err := p.fpmArgs()
-	if err != nil {
-		return []byte{}, err
-	}
-
+func (p *Package) Package(args []string, pkgType string) ([]byte, error) {
+	logger := p.logger.WithField("type", pkgType)
 	// prepend source and dest arguments
 	prefixArgs := []string{
 		"-s", "dir",
-		"-t", "rpm",
+		"-t", pkgType,
 		"-p", p.OutputRoot,
 	}
-	args = append(prefixArgs, args...) // TODO: make this do any type of packaging supported by FPM
+	args = append(prefixArgs, args...)
 
-	p.logger.Info("packaging with FPM")
+	logger.Info("packaging with FPM")
 	fpm := exec.Command("fpm", args...)
 	out, err := fpm.CombinedOutput()
 
@@ -174,7 +151,7 @@ func (p *Package) Package() ([]byte, error) {
 		err = errors.New("package command exited with a non-zero exit code")
 	}
 
-	p.logger.WithFields(logrus.Fields{
+	logger.WithFields(logrus.Fields{
 		"systemTime": fpm.ProcessState.SystemTime(),
 		"userTime":   fpm.ProcessState.UserTime(),
 		"success":    fpm.ProcessState.Success(),

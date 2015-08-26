@@ -42,6 +42,7 @@ func init() {
 	RootCmd.PersistentFlags().String("log-level", "info", "one of debug, info, warn, error, or fatal")
 	RootCmd.PersistentFlags().String("log-format", "text", "specify output (text or json)")
 	RootCmd.PersistentFlags().String("shell", "bash", "shell to use for executing build scripts")
+	RootCmd.PersistentFlags().String("type", "rpm", "type of package to build (flag can be repeated)")
 
 	cwd, err := os.Getwd()
 	if err != nil {
