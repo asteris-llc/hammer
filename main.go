@@ -48,7 +48,6 @@ func init() {
 		logrus.WithField("error", err).Warning("could not get working directory")
 	}
 	RootCmd.PersistentFlags().String("search", cwd, "where to look for package definitions")
-	RootCmd.PersistentFlags().String("cache", path.Join(cwd, ".hammer-cache"), "where to cache downloaded files")
 	RootCmd.PersistentFlags().String("output", path.Join(cwd, "out"), "where to place output packages")
 
 	err = viper.BindPFlags(RootCmd.PersistentFlags())
