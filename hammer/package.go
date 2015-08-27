@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"text/template"
 )
@@ -51,6 +52,9 @@ type Package struct {
 	SpecRoot   string `yaml:"-"`
 	TargetRoot string `yaml:"-"`
 
+	// information about the machine doing the building
+	CPUs int `yaml:"-"`
+
 	logger *logrus.Entry
 }
 
@@ -59,7 +63,14 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 	err := yaml.Unmarshal(content, p)
 	p.logger = logrus.WithField("name", p.Name)
 
-	return p, err
+	if err != nil {
+		return p, err
+	}
+
+	// machine information
+	p.CPUs = runtime.NumCPU()
+
+	return p, nil
 }
 
 func (p *Package) Cleanup() error {
