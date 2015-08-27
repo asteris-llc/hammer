@@ -42,15 +42,15 @@ targets:
     dest: /usr/bin/
   - src: "{{.BuildRoot}}/dist/"
     dest: /usr/share/consul-ui/
-  - src: "{{.Root}}/consul.service"
+  - src: "{{.SpecRoot}}/consul.service"
     dest: /etc/systemd/system/consul.service
-  - src: "{{.Root}}/consul.json"
+  - src: "{{.SpecRoot}}/consul.json"
     dest: /etc/consul/
     config: true
-  - src: "{{.Root}}/consul-ui.json"
+  - src: "{{.SpecRoot}}/consul-ui.json"
     dest: /etc/consul/
     config: true
-  - src: "{{.Root}}/consul.sysconfig"
+  - src: "{{.SpecRoot}}/consul.sysconfig"
     dest: /etc/sysconfig/consul
     config: true
 

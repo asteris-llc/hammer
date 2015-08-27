@@ -44,13 +44,14 @@ type Package struct {
 	// target-specific options // TODO: add deb, etc
 	RPM map[string]string `yaml:"rpm"`
 
-	// internal state
+	// various roots (SpecRoot is where the spec is)
 	BuildRoot  string `yaml:"-"`
 	OutputRoot string `yaml:"-"`
-	Root       string `yaml:"-"`
 	ScriptRoot string `yaml:"-"`
+	SpecRoot   string `yaml:"-"`
 	TargetRoot string `yaml:"-"`
-	logger     *logrus.Entry
+
+	logger *logrus.Entry
 }
 
 func NewPackageFromYAML(content []byte) (*Package, error) {
@@ -163,11 +164,15 @@ func (p *Package) Package(args []string, pkgType string) ([]byte, error) {
 		err = errors.New("package command exited with a non-zero exit code")
 	}
 
-	logger.WithFields(logrus.Fields{
-		"systemTime": fpm.ProcessState.SystemTime(),
-		"userTime":   fpm.ProcessState.UserTime(),
-		"success":    fpm.ProcessState.Success(),
-	}).Debug("package command exited")
+	if fpm.ProcessState != nil {
+		logger.WithFields(logrus.Fields{
+			"systemTime": fpm.ProcessState.SystemTime(),
+			"userTime":   fpm.ProcessState.UserTime(),
+			"success":    fpm.ProcessState.Success(),
+		}).Debug("package command exited")
+	} else {
+		logger.Debug("package command exited")
+	}
 
 	return out, err
 }
