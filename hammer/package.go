@@ -20,8 +20,9 @@ var (
 )
 
 type Target struct {
-	Src  string `yaml:"src"`
-	Dest string `yaml:"dest"`
+	Src      string `yaml:"src"`
+	Dest     string `yaml:"dest"`
+	Template bool   `yaml:"template"`
 }
 
 type Package struct {
@@ -47,6 +48,7 @@ type Package struct {
 	OutputRoot string `yaml:"-"`
 	Root       string `yaml:"-"`
 	ScriptRoot string `yaml:"-"`
+	TargetRoot string `yaml:"-"`
 	logger     *logrus.Entry
 }
 
@@ -334,13 +336,21 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	// TODO: --config-files
 
+	// targets
+	targetDir, err := ioutil.TempDir("", "hammer-targets-"+p.Name)
+	if err != nil {
+		p.logger.WithField("error", err).Error("could not create target directory")
+		return args, err
+	}
+	p.TargetRoot = targetDir
+
 	for i, target := range p.Targets {
-		// TODO: template source content
-		src, err := p.Render(target.Src)
+		srcBuf, err := p.Render(target.Src)
 		if err != nil {
 			p.logger.WithField("index", i).Error("error templating target source name")
 			return args, err
 		}
+		src := srcBuf.String()
 
 		dest, err := p.Render(target.Dest)
 		if err != nil {
@@ -348,7 +358,45 @@ func (p *Package) fpmArgs() ([]string, error) {
 			return args, err
 		}
 
-		args = append(args, src.String()+"="+dest.String())
+		// opt-in templating. We don't want to template *every* file because some
+		// things look like Go templates and aren't (see for example every other
+		// kind of mustache template)
+		if !target.Template {
+			args = append(args, src+"="+dest.String())
+		} else {
+			var content []byte
+			rawContent, err := ioutil.ReadFile(src)
+			if err != nil {
+				p.logger.WithFields(logrus.Fields{
+					"name":  src,
+					"error": err,
+				}).Error("error reading content")
+				return args, err
+			}
+
+			contentBuf, err := p.Render(string(rawContent))
+			if err != nil {
+				p.logger.WithFields(logrus.Fields{
+					"name":  src,
+					"error": err,
+				}).Error("error templating content")
+				return args, err
+			}
+			content = contentBuf.Bytes()
+
+			_, name := path.Split(src)
+			contentDest := path.Join(p.TargetRoot, name)
+			err = ioutil.WriteFile(contentDest, content, 0777)
+			if err != nil {
+				p.logger.WithFields(logrus.Fields{
+					"name":  src,
+					"error": err,
+				}).Error("error writing content")
+				return args, err
+			}
+
+			args = append(args, contentDest+"="+dest.String())
+		}
 	}
 
 	return args, nil
