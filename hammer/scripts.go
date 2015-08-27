@@ -9,15 +9,20 @@ import (
 
 type Scripts map[string]string
 
-func (s Scripts) BuildSources(logger *logrus.Entry, where string) (out []byte, err error) {
-	cmd := exec.Command(viper.GetString("shell"), "-e", "-c", s["build"])
+func (s Scripts) BuildSources(p *Package, where string) (out []byte, err error) {
+	build, err := p.Render(s["build"])
+	if err != nil {
+		return nil, err
+	}
+
+	cmd := exec.Command(viper.GetString("shell"), "-e", "-c", build.String())
 	cmd.Dir = where
 	out, err = cmd.CombinedOutput()
 	if err == nil && !cmd.ProcessState.Success() {
 		err = errors.New("build command exited with a non-zero exit code")
 	}
 
-	logger.WithFields(logrus.Fields{
+	p.logger.WithFields(logrus.Fields{
 		"systemTime": cmd.ProcessState.SystemTime(),
 		"userTime":   cmd.ProcessState.UserTime(),
 		"success":    cmd.ProcessState.Success(),

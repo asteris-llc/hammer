@@ -98,7 +98,7 @@ func (p *Package) Build() error {
 
 	// perform the build
 	p.logger.Info("building")
-	out, err := p.Scripts.BuildSources(p.logger, buildDir)
+	out, err := p.Scripts.BuildSources(p, buildDir)
 	if err != nil {
 		p.logger.WithFields(logrus.Fields{
 			"error":  err,
