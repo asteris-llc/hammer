@@ -100,7 +100,7 @@ rpm:
 When saved as `spec.yml` in some folder, Hammer will find and execute it,
 producing a package. Most fields are templated, and you can use Go templates to
 get fields on the
-[Package](https://godoc.org/github.com/asteris-llc/hammer#Package) struct.
+[Package](https://godoc.org/github.com/asteris-llc/hammer/hammer#Package) struct.
 
 ## Installation
 
