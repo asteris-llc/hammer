@@ -24,23 +24,34 @@ type Resource struct {
 	Unpack   bool   `yaml:"unpack"`
 }
 
-func (s *Resource) Name() string {
-	_, name := path.Split(s.URL)
+func (s *Resource) RenderURL(p *Package) string {
+	url, err := p.Render(s.URL)
+
+	var out string
+	if err != nil {
+		p.logger.WithField("error", err).Warn("could not render resource name, using raw name")
+		out = s.URL
+	} else {
+		out = url.String()
+	}
+
+	return out
+}
+
+func (s *Resource) Name(p *Package) string {
+	url := s.RenderURL(p)
+	_, name := path.Split(url)
 	return name
 }
 
 func (s *Resource) Download(p *Package) ([]byte, error) {
-	logger := p.logger.WithField("resource", s.Name())
+	logger := p.logger.WithField("resource", s.Name(p))
 	logger.Info("getting resource")
 
-	url, err := p.Render(s.URL)
-	if err != nil {
-		logger.WithField("error", err).Error("could not render URL string as a template")
-		return nil, err
-	}
+	url := s.RenderURL(p)
 
 	client := http.Client{} // TODO: caching of some kind?
-	resp, err := client.Get(url.String())
+	resp, err := client.Get(url)
 	if err != nil {
 		logger.WithField("error", err).Error("could not complete request")
 		return nil, err

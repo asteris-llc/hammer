@@ -54,6 +54,7 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 	p := new(Package)
 	err := yaml.Unmarshal(content, p)
 	p.logger = logrus.WithField("name", p.Name)
+
 	return p, err
 }
 
@@ -76,7 +77,6 @@ func (p *Package) Cleanup() error {
 func (p *Package) Build() error {
 	// create temporary directory for building
 	buildDir, err := ioutil.TempDir("", "hammer-"+p.Name)
-	defer os.Remove(buildDir)
 	if err != nil {
 		p.logger.WithField("error", err).Error("could not create build directory")
 		return err
@@ -90,7 +90,7 @@ func (p *Package) Build() error {
 			return err
 		}
 		ioutil.WriteFile(
-			path.Join(buildDir, s.Name()),
+			path.Join(buildDir, s.Name(p)),
 			body,
 			0777,
 		)
