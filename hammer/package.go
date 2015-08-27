@@ -23,6 +23,7 @@ type Target struct {
 	Src      string `yaml:"src"`
 	Dest     string `yaml:"dest"`
 	Template bool   `yaml:"template"`
+	Config   bool   `yaml:"config"`
 }
 
 type Package struct {
@@ -334,7 +335,20 @@ func (p *Package) fpmArgs() ([]string, error) {
 		args = append(args, "--"+name, loc)
 	}
 
-	// TODO: --config-files
+	// config files
+	for i, target := range p.Targets {
+		if !target.Config {
+			continue
+		}
+
+		dest, err := p.Render(target.Dest)
+		if err != nil {
+			p.logger.WithField("index", i).Error("error templating target destination")
+			return args, err
+		}
+
+		args = append(args, "--config-files", dest.String())
+	}
 
 	// targets
 	targetDir, err := ioutil.TempDir("", "hammer-targets-"+p.Name)
