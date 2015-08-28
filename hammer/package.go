@@ -122,6 +122,7 @@ func (p *Package) Build() error {
 		return err
 	}
 
+	p.logger.Info("finished building")
 	return nil
 }
 
@@ -155,6 +156,7 @@ func (p *Package) Package() error {
 		}
 	}
 
+	p.logger.Info("finished packaging")
 	return nil
 }
 
