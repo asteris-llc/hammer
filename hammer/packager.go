@@ -72,12 +72,23 @@ func (p *Packager) Build() (success bool) {
 
 	for _, pkg := range p.packages {
 		go func(pkg *Package) {
-			// pkg.Build() is responsible for reporting errors to the user, so we just
-			// need to check if there's an error and
+			// these functions are responsible for reporting errors to the user, so we
+			// just need to check if there's an error and set the success value
 			err := pkg.Build()
 			if err != nil {
 				success = false
 			}
+
+			err = pkg.Package()
+			if err != nil {
+				success = false
+			}
+
+			err = pkg.Cleanup()
+			if err != nil {
+				success = false
+			}
+
 			wg.Done()
 		}(pkg)
 	}

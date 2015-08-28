@@ -122,25 +122,7 @@ func (p *Package) Build() error {
 		return err
 	}
 
-	// package the results of the build
-	fpmArgs, err := p.fpmArgs()
-	if err != nil {
-		p.logger.WithField("error", err).Error("failed to get package args")
-		return err
-	}
-
-	for _, outType := range strings.Split(viper.GetString("type"), ",") {
-		out, err = p.Package(fpmArgs, outType)
-		if err != nil {
-			p.logger.WithFields(logrus.Fields{
-				"error": err,
-				"out":   string(out),
-			}).Error("failed to package")
-			return err
-		}
-	}
-
-	return p.Cleanup()
+	return nil
 }
 
 func (p *Package) Render(in string) (bytes.Buffer, error) {
@@ -154,7 +136,29 @@ func (p *Package) Render(in string) (bytes.Buffer, error) {
 	return buf, err
 }
 
-func (p *Package) Package(args []string, pkgType string) ([]byte, error) {
+func (p *Package) Package() error {
+	// package the results of the build
+	fpmArgs, err := p.fpmArgs()
+	if err != nil {
+		p.logger.WithField("error", err).Error("failed to get package args")
+		return err
+	}
+
+	for _, outType := range strings.Split(viper.GetString("type"), ",") {
+		out, err := p.FPM(fpmArgs, outType)
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"out":   string(out),
+			}).Error("failed to package")
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (p *Package) FPM(args []string, pkgType string) ([]byte, error) {
 	logger := p.logger.WithField("type", pkgType)
 	logger.Info("packaging with FPM")
 
