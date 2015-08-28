@@ -41,7 +41,7 @@ type Package struct {
 	Resources    []Resource `yaml:"resources"`
 	Targets      []Target   `yaml:"targets"`
 	Scripts      Scripts    `yaml:"scripts"`
-	ExtraArgs    string     `yaml:"extr-args"`
+	ExtraArgs    string     `yaml:"extra-args"`
 
 	// various roots
 	BuildRoot  string `yaml:"-"`
@@ -146,6 +146,7 @@ func (p *Package) Package() error {
 	extra, err := shlex.Split(p.ExtraArgs, true)
 	if err != nil {
 		p.logger.WithField("error", err).Error("failed to parse extra args")
+		return err
 	}
 	fpmArgs = append(extra, fpmArgs...)
 
