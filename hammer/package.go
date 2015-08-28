@@ -292,8 +292,15 @@ func (p *Package) fpmArgs() ([]string, error) {
 		args = append(args, "--url", url.String())
 	}
 
-	for _, depend := range p.Depends {
-		args = append(args, "--depends", depend)
+	for _, rawDepend := range p.Depends {
+		depend, err := p.Render(rawDepend)
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"raw":   rawDepend,
+			}).Error("failed to render dependency as template")
+		}
+		args = append(args, "--depends", depend.String())
 	}
 
 	// architecture
