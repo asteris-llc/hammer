@@ -3,8 +3,8 @@ package hammer
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/Sirupsen/logrus"
+	shlex "github.com/anmitsu/go-shlex"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -41,11 +41,9 @@ type Package struct {
 	Resources    []Resource `yaml:"resources"`
 	Targets      []Target   `yaml:"targets"`
 	Scripts      Scripts    `yaml:"scripts"`
+	ExtraArgs    string     `yaml:"extr-args"`
 
-	// target-specific options // TODO: add deb, etc
-	RPM map[string]string `yaml:"rpm"`
-
-	// various roots (SpecRoot is where the spec is)
+	// various roots
 	BuildRoot  string `yaml:"-"`
 	OutputRoot string `yaml:"-"`
 	ScriptRoot string `yaml:"-"`
@@ -138,12 +136,18 @@ func (p *Package) Render(in string) (bytes.Buffer, error) {
 }
 
 func (p *Package) Package() error {
-	// package the results of the build
 	fpmArgs, err := p.fpmArgs()
 	if err != nil {
 		p.logger.WithField("error", err).Error("failed to get package args")
 		return err
 	}
+
+	// prepend extra args
+	extra, err := shlex.Split(p.ExtraArgs, true)
+	if err != nil {
+		p.logger.WithField("error", err).Error("failed to parse extra args")
+	}
+	fpmArgs = append(extra, fpmArgs...)
 
 	for _, outType := range strings.Split(viper.GetString("type"), ",") {
 		out, err := p.FPM(fpmArgs, outType)
@@ -196,25 +200,6 @@ func (p *Package) FPM(args []string, pkgType string) ([]byte, error) {
 
 func (p *Package) typeArgs(t string) []string {
 	args := []string{}
-
-	var (
-		prefix string
-		argMap map[string]string
-	)
-
-	switch t {
-	case "rpm":
-		prefix = "rpm"
-		argMap = p.RPM
-	}
-
-	for key, value := range argMap {
-		args = append(
-			args,
-			fmt.Sprintf("--%s-%s", prefix, key),
-			value,
-		)
-	}
 
 	// specific fixes for different output types
 	switch t {
