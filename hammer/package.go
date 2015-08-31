@@ -90,13 +90,13 @@ func (p *Package) BuildAndPackage() error {
 
 	for name, stage := range stages {
 		logger := p.logger.WithField("stage", name)
-		logger.Info("starting")
+		logger.Debugf("starting %s stage", name)
 		err := stage()
 		if err != nil {
 			logger.WithField("error", err).Error("could not complete stage")
 			return err
 		}
-		logger.Info("finished")
+		logger.Infof("finished %s stage", name)
 	}
 
 	return nil
@@ -176,7 +176,7 @@ func (p *Package) Build() error {
 	// perform the build
 	buildScript, ok := p.scriptLocations["build"]
 	if !ok {
-		p.logger.Warn("build script not found. skipping build.")
+		p.logger.Warn("build script not found. skipping build stage.")
 		return nil
 	}
 
