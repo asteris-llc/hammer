@@ -1,7 +1,6 @@
 package hammer
 
 import (
-	"github.com/Sirupsen/logrus"
 	"os"
 	"sync"
 )
@@ -21,48 +20,6 @@ func (p *Packager) EnsureOutputDir(path string) error {
 	}
 
 	return nil
-}
-
-func (p *Packager) Only(names []string) {
-	tmp := []*Package{}
-	for _, pkg := range p.packages {
-		found := false
-		for _, name := range names {
-			if pkg.Name == name {
-				found = true
-				break
-			}
-		}
-
-		if found {
-			tmp = append(tmp, pkg)
-		} else {
-			logrus.WithField("name", pkg.Name).Info("skipping build")
-		}
-	}
-
-	p.packages = tmp
-}
-
-func (p *Packager) Exclude(names []string) {
-	tmp := []*Package{}
-	for _, pkg := range p.packages {
-		found := false
-		for _, name := range names {
-			if pkg.Name == name {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			tmp = append(tmp, pkg)
-		} else {
-			logrus.WithField("name", pkg.Name).Info("skipping build")
-		}
-	}
-
-	p.packages = tmp
 }
 
 func (p *Packager) Build() (success bool) {
