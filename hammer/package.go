@@ -66,7 +66,9 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 	// machine information
 	p.CPUs = runtime.NumCPU()
 
+	// private fields
 	p.SetLogger(logrus.StandardLogger())
+	p.SetTemplate(NewTemplate(p))
 
 	return p, nil
 }
