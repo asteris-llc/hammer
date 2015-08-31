@@ -154,24 +154,40 @@ func (p *Package) Build() error {
 			return err
 		}
 		ioutil.WriteFile(
-			path.Join(buildDir, s.Name(p)),
+			path.Join(p.BuildRoot, s.Name(p)),
 			body,
 			0777,
 		)
 	}
 
 	// perform the build
-	p.logger.Info("building")
-	out, err := p.Scripts.BuildSources(p, buildDir)
+	buildScript, err := p.Scripts.Content(p, "build")
+	if err != nil {
+		if err == ErrNoScript {
+			p.logger.WithField("error", err).Warn("build script not found. Skipping build.")
+			return nil
+		} else {
+			return err
+		}
+	}
+
+	cmd := exec.Command(viper.GetString("shell"), "-c", buildScript.String())
+	cmd.Dir = p.BuildRoot
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		p.logger.WithFields(logrus.Fields{
 			"error":  err,
-			"output": string(out),
-		}).Error("failed to build")
+			"output": out,
+		}).Error("build script exited with a non-zero exit code")
 		return err
 	}
 
-	p.logger.Info("finished building")
+	p.logger.WithFields(logrus.Fields{
+		"systemTime": cmd.ProcessState.SystemTime(),
+		"userTime":   cmd.ProcessState.UserTime(),
+		"success":    cmd.ProcessState.Success(),
+	}).Debug("build command exited")
+
 	return nil
 }
 

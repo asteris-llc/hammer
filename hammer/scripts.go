@@ -1,32 +1,31 @@
 package hammer
 
 import (
+	"bytes"
 	"errors"
 	"github.com/Sirupsen/logrus"
-	"github.com/spf13/viper"
-	"os/exec"
+)
+
+var (
+	ErrNoScript = errors.New("no such script")
 )
 
 type Scripts map[string]string
 
-func (s Scripts) BuildSources(p *Package, where string) (out []byte, err error) {
-	build, err := p.template.Render(s["build"])
+func (s Scripts) Content(p *Package, name string) (bytes.Buffer, error) {
+	source, ok := s[name]
+	if !ok {
+		return bytes.Buffer{}, ErrNoScript
+	}
+
+	out, err := p.template.Render(source)
 	if err != nil {
-		return nil, err
+		p.logger.WithFields(logrus.Fields{
+			"name":  name,
+			"error": err,
+		}).Error("could not template script")
+		return bytes.Buffer{}, err
 	}
 
-	cmd := exec.Command(viper.GetString("shell"), "-e", "-c", build.String())
-	cmd.Dir = where
-	out, err = cmd.CombinedOutput()
-	if err == nil && !cmd.ProcessState.Success() {
-		err = errors.New("build command exited with a non-zero exit code")
-	}
-
-	p.logger.WithFields(logrus.Fields{
-		"systemTime": cmd.ProcessState.SystemTime(),
-		"userTime":   cmd.ProcessState.UserTime(),
-		"success":    cmd.ProcessState.Success(),
-	}).Debug("build command exited")
-
-	return
+	return out, nil
 }
