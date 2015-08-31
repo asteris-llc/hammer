@@ -52,8 +52,9 @@ type Package struct {
 	// information about the machine doing the building
 	CPUs int `yaml:"-"`
 
-	logger   *logrus.Entry
-	template *Template
+	logger          *logrus.Entry
+	template        *Template
+	scriptLocations map[string]string
 }
 
 func NewPackageFromYAML(content []byte) (*Package, error) {
@@ -108,7 +109,9 @@ func (p *Package) BuildAndPackage() error {
 
 func (p *Package) Setup() error {
 	roots := map[string]*string{
-		"build": &p.BuildRoot,
+		"build":  &p.BuildRoot,
+		"script": &p.ScriptRoot,
+		"target": &p.TargetRoot,
 	}
 
 	for name, root := range roots {
@@ -137,6 +140,12 @@ func (p *Package) Setup() error {
 		)
 	}
 
+	locations, err := p.Scripts.RenderAndWriteAll(p)
+	if err != nil {
+		return err
+	}
+	p.scriptLocations = locations
+
 	return nil
 }
 
@@ -163,17 +172,13 @@ func (p *Package) Cleanup() error {
 
 func (p *Package) Build() error {
 	// perform the build
-	buildScript, err := p.Scripts.Content(p, "build")
-	if err != nil {
-		if err == ErrNoScript {
-			p.logger.WithField("error", err).Warn("build script not found. Skipping build.")
-			return nil
-		} else {
-			return err
-		}
+	buildScript, ok := p.scriptLocations["build"]
+	if !ok {
+		p.logger.Warn("build script not found. Skipping build.")
+		return nil
 	}
 
-	cmd := exec.Command(viper.GetString("shell"), "-c", buildScript.String())
+	cmd := exec.Command(viper.GetString("shell"), buildScript)
 	cmd.Dir = p.BuildRoot
 	out, err := cmd.CombinedOutput()
 	if err != nil {
