@@ -176,7 +176,7 @@ func (p *Package) Build() error {
 	// perform the build
 	buildScript, ok := p.scriptLocations["build"]
 	if !ok {
-		p.logger.Warn("build script not found. Skipping build.")
+		p.logger.Warn("build script not found. skipping build.")
 		return nil
 	}
 
