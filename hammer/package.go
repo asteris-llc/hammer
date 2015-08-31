@@ -190,7 +190,7 @@ func (p *Package) Build() error {
 	if err != nil {
 		p.logger.WithFields(logrus.Fields{
 			"error":  err,
-			"output": out,
+			"output": string(out),
 		}).Error("build script exited with a non-zero exit code")
 		return err
 	}
