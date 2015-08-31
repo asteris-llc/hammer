@@ -82,21 +82,25 @@ func (p *Package) SetTemplate(tmpl *Template) {
 // process
 func (p *Package) BuildAndPackage() error {
 	defer p.Cleanup()
-	stages := map[string]func() error{
-		"setup":   p.Setup,
-		"build":   p.Build,
-		"package": p.Package,
+	type Stage struct {
+		Name   string
+		Action func() error
+	}
+	stages := []Stage{
+		{"setup", p.Setup},
+		{"build", p.Build},
+		{"package", p.Package},
 	}
 
-	for name, stage := range stages {
-		logger := p.logger.WithField("stage", name)
-		logger.Debugf("starting %s stage", name)
-		err := stage()
+	for _, stage := range stages {
+		logger := p.logger.WithField("stage", stage.Name)
+		logger.Debugf("starting %s stage", stage.Name)
+		err := stage.Action()
 		if err != nil {
 			logger.WithField("error", err).Error("could not complete stage")
 			return err
 		}
-		logger.Infof("finished %s stage", name)
+		logger.Infof("finished %s stage", stage.Name)
 	}
 
 	return nil
