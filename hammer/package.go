@@ -59,7 +59,6 @@ type Package struct {
 func NewPackageFromYAML(content []byte) (*Package, error) {
 	p := new(Package)
 	err := yaml.Unmarshal(content, p)
-	p.logger = logrus.WithField("name", p.Name)
 
 	if err != nil {
 		return p, err
@@ -68,7 +67,13 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 	// machine information
 	p.CPUs = runtime.NumCPU()
 
+	p.SetLogger(logrus.StandardLogger())
+
 	return p, nil
+}
+
+func (p *Package) SetLogger(logger *logrus.Logger) {
+	p.logger = logger.WithField("name", p.Name)
 }
 
 func (p *Package) Cleanup() error {
