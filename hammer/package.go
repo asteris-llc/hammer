@@ -74,6 +74,16 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 	return p, nil
 }
 
+// setters
+func (p *Package) SetLogger(logger *logrus.Logger) {
+	p.logger = logger.WithField("name", p.Name)
+}
+
+func (p *Package) SetTemplate(tmpl *Template) {
+	p.template = tmpl
+}
+
+// process
 func (p *Package) BuildAndPackage() error {
 	stages := map[string]func() error{
 		"setup":   p.Setup,
@@ -96,14 +106,6 @@ func (p *Package) BuildAndPackage() error {
 	return nil
 }
 
-func (p *Package) SetLogger(logger *logrus.Logger) {
-	p.logger = logger.WithField("name", p.Name)
-}
-
-func (p *Package) SetTemplate(tmpl *Template) {
-	p.template = tmpl
-}
-
 func (p *Package) Setup() error {
 	roots := map[string]*string{
 		"build": &p.BuildRoot,
@@ -120,6 +122,19 @@ func (p *Package) Setup() error {
 		}
 
 		*root = dir
+	}
+
+	// get the sources and store them in the temporary directory
+	for _, s := range p.Resources {
+		body, err := s.Download(p)
+		if err != nil {
+			return err
+		}
+		ioutil.WriteFile(
+			path.Join(p.BuildRoot, s.Name(p)),
+			body,
+			0777,
+		)
 	}
 
 	return nil
@@ -147,19 +162,6 @@ func (p *Package) Cleanup() error {
 }
 
 func (p *Package) Build() error {
-	// get the sources and store them in the temporary directory
-	for _, s := range p.Resources {
-		body, err := s.Download(p)
-		if err != nil {
-			return err
-		}
-		ioutil.WriteFile(
-			path.Join(p.BuildRoot, s.Name(p)),
-			body,
-			0777,
-		)
-	}
-
 	// perform the build
 	buildScript, err := p.Scripts.Content(p, "build")
 	if err != nil {
