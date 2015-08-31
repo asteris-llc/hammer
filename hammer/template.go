@@ -16,9 +16,10 @@ func NewTemplate(pkg *Package) *Template {
 	t := &Template{Package: pkg}
 
 	t.Funcs = template.FuncMap{
-		"include":   t.Include,
-		"specFile":  t.SpecFile,
-		"buildFile": t.BuildFile,
+		"include":         t.Include,
+		"includeTemplate": t.IncludeTemplate,
+		"specFile":        t.SpecFile,
+		"buildFile":       t.BuildFile,
 	}
 
 	return t
@@ -43,6 +44,16 @@ func (t *Template) Include(path string) (string, error) {
 		return "", err
 	}
 	return string(out), nil
+}
+
+func (t *Template) IncludeTemplate(path string) (string, error) {
+	tmpl, err := t.Include(path)
+	if err != nil {
+		return "", err
+	}
+
+	rendered, err := t.Render(tmpl)
+	return rendered.String(), err
 }
 
 func (t *Template) SpecFile(name string) string {
