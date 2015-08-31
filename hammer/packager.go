@@ -74,17 +74,7 @@ func (p *Packager) Build() (success bool) {
 		go func(pkg *Package) {
 			// these functions are responsible for reporting errors to the user, so we
 			// just need to check if there's an error and set the success value
-			err := pkg.Build()
-			if err != nil {
-				success = false
-			}
-
-			err = pkg.Package()
-			if err != nil {
-				success = false
-			}
-
-			err = pkg.Cleanup()
+			err := pkg.BuildAndPackage()
 			if err != nil {
 				success = false
 			}
