@@ -13,7 +13,7 @@ var (
 		Use:   "hammer",
 		Short: "hammer builds a bunch of package specs at once",
 		Run: func(cmd *cobra.Command, args []string) {
-			logrus.Fatal("no command specified (try `logrus help build`)")
+			logrus.Fatal("no command specified (try `hammer help build`)")
 		},
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			setupLogging()
