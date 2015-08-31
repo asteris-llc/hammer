@@ -72,16 +72,21 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 }
 
 func (p *Package) Cleanup() error {
-	err := os.RemoveAll(p.BuildRoot)
-	if err != nil {
-		p.logger.WithField("error", err).Error("could not remove build root during cleanup")
-		return err
+	roots := map[string]string{
+		"build":  p.BuildRoot,
+		"script": p.ScriptRoot,
+		"target": p.TargetRoot,
 	}
 
-	err = os.RemoveAll(p.ScriptRoot)
-	if err != nil {
-		p.logger.WithField("error", err).Error("could not remove script root during cleanup")
-		return err
+	for root, dest := range roots {
+		err := os.RemoveAll(dest)
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"root":  root,
+			}).Error("could not remove root during cleanup")
+			return err
+		}
 	}
 
 	return nil
