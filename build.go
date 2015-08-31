@@ -20,12 +20,24 @@ var (
 				logrus.WithField("error", err).Fatal("could not load packages")
 			}
 
-			packages := []*hammer.Package{}
-			for _, pkg := range loaded {
+			var packages []*hammer.Package
+			if len(packageNames) == 0 {
+				packages = loaded
+			} else {
+				packages = []*hammer.Package{}
 				for _, name := range packageNames {
-					if pkg.Name == name {
-						packages = append(packages, pkg)
-						break
+					found := false
+
+					for _, pkg := range loaded {
+						if pkg.Name == name {
+							packages = append(packages, pkg)
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						logrus.WithField("name", name).Warn("could not find package")
 					}
 				}
 			}
