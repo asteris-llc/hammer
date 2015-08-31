@@ -2,6 +2,7 @@ package hammer
 
 import (
 	"errors"
+	"fmt"
 	"github.com/Sirupsen/logrus"
 	shlex "github.com/anmitsu/go-shlex"
 	"github.com/spf13/viper"
@@ -73,12 +74,55 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 	return p, nil
 }
 
+func (p *Package) BuildAndPackage() error {
+	stages := map[string]func() error{
+		"setup":   p.Setup,
+		"build":   p.Build,
+		"package": p.Package,
+		"cleanup": p.Cleanup,
+	}
+
+	for name, stage := range stages {
+		logger := p.logger.WithField("stage", name)
+		logger.Info("starting")
+		err := stage()
+		if err != nil {
+			logger.WithField("error", err).Error("could not complete stage")
+			return err
+		}
+		logger.Info("finished")
+	}
+
+	return nil
+}
+
 func (p *Package) SetLogger(logger *logrus.Logger) {
 	p.logger = logger.WithField("name", p.Name)
 }
 
 func (p *Package) SetTemplate(tmpl *Template) {
 	p.template = tmpl
+}
+
+func (p *Package) Setup() error {
+	roots := map[string]*string{
+		"build": &p.BuildRoot,
+	}
+
+	for name, root := range roots {
+		dir, err := ioutil.TempDir("", fmt.Sprintf("hammer-%s-%s", p.Name, name))
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"root":  name,
+			}).Errorf("could not create temporary directory")
+			return err
+		}
+
+		*root = dir
+	}
+
+	return nil
 }
 
 func (p *Package) Cleanup() error {
@@ -103,14 +147,6 @@ func (p *Package) Cleanup() error {
 }
 
 func (p *Package) Build() error {
-	// create temporary directory for building
-	buildDir, err := ioutil.TempDir("", "hammer-"+p.Name)
-	if err != nil {
-		p.logger.WithField("error", err).Error("could not create build directory")
-		return err
-	}
-	p.BuildRoot = buildDir
-
 	// get the sources and store them in the temporary directory
 	for _, s := range p.Resources {
 		body, err := s.Download(p)
