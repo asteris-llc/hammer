@@ -1,7 +1,6 @@
 package hammer
 
 import (
-	"bytes"
 	"errors"
 	"github.com/Sirupsen/logrus"
 	shlex "github.com/anmitsu/go-shlex"
@@ -13,7 +12,6 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	"text/template"
 )
 
 var (
@@ -53,7 +51,8 @@ type Package struct {
 	// information about the machine doing the building
 	CPUs int `yaml:"-"`
 
-	logger *logrus.Entry
+	logger   *logrus.Entry
+	template *Template
 }
 
 func NewPackageFromYAML(content []byte) (*Package, error) {
@@ -74,6 +73,10 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 
 func (p *Package) SetLogger(logger *logrus.Logger) {
 	p.logger = logger.WithField("name", p.Name)
+}
+
+func (p *Package) SetTemplate(tmpl *Template) {
+	p.template = tmpl
 }
 
 func (p *Package) Cleanup() error {
@@ -132,17 +135,6 @@ func (p *Package) Build() error {
 
 	p.logger.Info("finished building")
 	return nil
-}
-
-func (p *Package) Render(in string) (bytes.Buffer, error) {
-	var buf bytes.Buffer
-	tmpl, err := template.New(p.Name + "-" + in).Parse(in)
-	if err != nil {
-		return buf, err
-	}
-
-	err = tmpl.Execute(&buf, p)
-	return buf, err
 }
 
 func (p *Package) Package() error {
@@ -229,7 +221,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 	args := []string{}
 
 	// name
-	name, err := p.Render(p.Name)
+	name, err := p.template.Render(p.Name)
 	if err != nil {
 		p.logger.WithField("error", err).Error("failed to render name as template")
 		return args, err
@@ -237,7 +229,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 	args = append(args, "--name", name.String())
 
 	// version
-	version, err := p.Render(p.Version)
+	version, err := p.template.Render(p.Version)
 	if err != nil {
 		p.logger.WithField("error", err).Error("failed to render version as template")
 		return args, err
@@ -245,7 +237,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 	args = append(args, "--version", version.String())
 
 	// iteration
-	iteration, err := p.Render(p.Iteration)
+	iteration, err := p.template.Render(p.Iteration)
 	if err != nil {
 		p.logger.WithField("error", err).Error("failed to render iteration as template")
 		return args, err
@@ -254,7 +246,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	// epoch
 	if p.Epoch != "" {
-		epoch, err := p.Render(p.Epoch)
+		epoch, err := p.template.Render(p.Epoch)
 		if err != nil {
 			p.logger.WithField("error", err).Error("failed to render epoch as template")
 			return args, err
@@ -264,7 +256,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	// license
 	if p.License != "" {
-		license, err := p.Render(p.License)
+		license, err := p.template.Render(p.License)
 		if err != nil {
 			p.logger.WithField("error", err).Error("failed to render license as template")
 			return args, err
@@ -274,7 +266,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	// vendor
 	if p.Vendor != "" {
-		vendor, err := p.Render(p.Vendor)
+		vendor, err := p.template.Render(p.Vendor)
 		if err != nil {
 			p.logger.WithField("error", err).Error("failed to render vendor as template")
 			return args, err
@@ -284,7 +276,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	// description
 	if p.Description != "" {
-		description, err := p.Render(p.Description)
+		description, err := p.template.Render(p.Description)
 		if err != nil {
 			p.logger.WithField("error", err).Error("failed to render description as template")
 			return args, err
@@ -294,7 +286,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	// url
 	if p.URL != "" {
-		url, err := p.Render(p.URL)
+		url, err := p.template.Render(p.URL)
 		if err != nil {
 			p.logger.WithField("error", err).Error("failed to render url as template")
 			return args, err
@@ -303,7 +295,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 	}
 
 	for _, rawDepend := range p.Depends {
-		depend, err := p.Render(rawDepend)
+		depend, err := p.template.Render(rawDepend)
 		if err != nil {
 			p.logger.WithFields(logrus.Fields{
 				"error": err,
@@ -315,7 +307,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 
 	// architecture
 	if p.Architecture != "" {
-		architecture, err := p.Render(p.Architecture)
+		architecture, err := p.template.Render(p.Architecture)
 		if err != nil {
 			p.logger.WithField("error", err).Error("failed to render architecture as template")
 			return args, err
@@ -342,7 +334,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 			return args, ErrInvalidScriptName
 		}
 
-		content, err := p.Render(value)
+		content, err := p.template.Render(value)
 		if err != nil {
 			scriptLogger.WithField("error", err).Error("error in templating script")
 			return args, err
@@ -366,7 +358,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 			continue
 		}
 
-		dest, err := p.Render(target.Dest)
+		dest, err := p.template.Render(target.Dest)
 		if err != nil {
 			p.logger.WithField("index", i).Error("error templating target destination")
 			return args, err
@@ -384,14 +376,14 @@ func (p *Package) fpmArgs() ([]string, error) {
 	p.TargetRoot = targetDir
 
 	for i, target := range p.Targets {
-		srcBuf, err := p.Render(target.Src)
+		srcBuf, err := p.template.Render(target.Src)
 		if err != nil {
 			p.logger.WithField("index", i).Error("error templating target source name")
 			return args, err
 		}
 		src := srcBuf.String()
 
-		dest, err := p.Render(target.Dest)
+		dest, err := p.template.Render(target.Dest)
 		if err != nil {
 			p.logger.WithField("index", i).Error("error templating target destination")
 			return args, err
@@ -413,7 +405,7 @@ func (p *Package) fpmArgs() ([]string, error) {
 				return args, err
 			}
 
-			contentBuf, err := p.Render(string(rawContent))
+			contentBuf, err := p.template.Render(string(rawContent))
 			if err != nil {
 				p.logger.WithFields(logrus.Fields{
 					"name":  src,

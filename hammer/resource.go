@@ -25,7 +25,7 @@ type Resource struct {
 }
 
 func (s *Resource) RenderURL(p *Package) string {
-	url, err := p.Render(s.URL)
+	url, err := p.template.Render(s.URL)
 
 	var out string
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 type Scripts map[string]string
 
 func (s Scripts) BuildSources(p *Package, where string) (out []byte, err error) {
-	build, err := p.Render(s["build"])
+	build, err := p.template.Render(s["build"])
 	if err != nil {
 		return nil, err
 	}
