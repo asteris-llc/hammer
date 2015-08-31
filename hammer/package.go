@@ -86,11 +86,11 @@ func (p *Package) SetTemplate(tmpl *Template) {
 
 // process
 func (p *Package) BuildAndPackage() error {
+	defer p.Cleanup()
 	stages := map[string]func() error{
 		"setup":   p.Setup,
 		"build":   p.Build,
 		"package": p.Package,
-		"cleanup": p.Cleanup,
 	}
 
 	for name, stage := range stages {
