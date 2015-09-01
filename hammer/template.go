@@ -16,10 +16,11 @@ func NewTemplate(pkg *Package) *Template {
 	t := &Template{Package: pkg}
 
 	t.Funcs = template.FuncMap{
+		"buildFile":       t.BuildFile,
+		"empty":           t.Empty,
 		"include":         t.Include,
 		"includeTemplate": t.IncludeTemplate,
 		"specFile":        t.SpecFile,
-		"buildFile":       t.BuildFile,
 	}
 
 	return t
@@ -62,4 +63,8 @@ func (t *Template) SpecFile(name string) string {
 
 func (t *Template) BuildFile(name string) string {
 	return path.Join(t.Package.BuildRoot, name)
+}
+
+func (t *Template) Empty() string {
+	return t.Package.Empty + "/"
 }

@@ -38,6 +38,7 @@ type Package struct {
 
 	// various roots
 	BuildRoot  string `yaml:"-"`
+	Empty      string `yaml:"-"`
 	OutputRoot string `yaml:"-"`
 	ScriptRoot string `yaml:"-"`
 	SpecRoot   string `yaml:"-"`
@@ -111,6 +112,7 @@ func (p *Package) Setup() error {
 		"build":  &p.BuildRoot,
 		"script": &p.ScriptRoot,
 		"target": &p.TargetRoot,
+		"empty":  &p.Empty,
 	}
 
 	for name, root := range roots {
@@ -160,6 +162,7 @@ func (p *Package) Cleanup() error {
 		"build":  p.BuildRoot,
 		"script": p.ScriptRoot,
 		"target": p.TargetRoot,
+		"empty":  p.Empty,
 	}
 
 	for root, dest := range roots {
