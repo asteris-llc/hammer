@@ -233,20 +233,6 @@ func (f *FPM) optsForType(t string) []string {
 		"-t", t,
 	}
 
-	switch t {
-	case "rpm":
-		opts = append(
-			opts,
-			"--rpm-auto-add-directories",
-		)
-		for _, exclude := range []string{"/etc/systemd", "/etc/systemd/system"} {
-			opts = append(
-				opts,
-				"--rpm-auto-add-exclude-directories", exclude,
-			)
-		}
-	}
-
 	return opts
 }
 
