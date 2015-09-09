@@ -5,7 +5,9 @@ import (
 	"github.com/asteris-llc/hammer/hammer"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"golang.org/x/net/context"
 	"os"
+	"os/signal"
 )
 
 var (
@@ -53,7 +55,25 @@ var (
 				logrus.WithField("error", err).Fatal("could not create output directory")
 			}
 
-			if !packager.Build() { // Errors are already reported to the user from here
+			ctx, cancel := context.WithCancel(context.Background())
+
+			// handle interrupts so we can clean up nicely
+			c := make(chan os.Signal, 1)
+			signal.Notify(c, os.Interrupt)
+			go func() {
+				for {
+					select {
+					case <-c:
+						logrus.Warn("interrupted, exiting cleanly")
+						cancel()
+
+					case <-ctx.Done():
+						return
+					}
+				}
+			}()
+
+			if !packager.Build(ctx, viper.GetInt("concurrent-jobs")) { // Errors are already reported to the user from here
 				os.Exit(1)
 			}
 		},

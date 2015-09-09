@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"os"
 	"path"
+	"runtime"
 )
 
 var (
@@ -29,6 +30,7 @@ func init() {
 	// build flags
 	BuildCmd.Flags().String("shell", "bash", "shell to use for executing build scripts")
 	BuildCmd.Flags().String("type", "rpm", "type of package to build (multiple build targets should be separated by commas)")
+	BuildCmd.Flags().Int("concurrent-jobs", runtime.NumCPU(), "number of packages to build at once")
 
 	cwd, err := os.Getwd()
 	if err != nil {
