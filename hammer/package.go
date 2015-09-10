@@ -3,6 +3,7 @@ package hammer
 import (
 	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/asteris-llc/hammer/hammer/cache"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -52,6 +53,7 @@ type Package struct {
 	// information about the machine doing the building
 	CPUs int `yaml:"-"`
 
+	cache           cache.Cache
 	logger          *logrus.Entry
 	logconsumer     LogConsumer
 	template        *Template
@@ -90,6 +92,11 @@ func (p *Package) SetLogger(logger *logrus.Logger) {
 // SetTemplate sets the default template renderer for the package
 func (p *Package) SetTemplate(tmpl *Template) {
 	p.template = tmpl
+}
+
+// SetCache sets the cache for the package
+func (p *Package) SetCache(cache cache.Cache) {
+	p.cache = cache
 }
 
 // process
