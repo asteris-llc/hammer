@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"os"
 	"path"
@@ -40,8 +41,12 @@ func init() {
 	buildCmd.Flags().String("output", path.Join(cwd, "out"), "where to place output packages")
 	buildCmd.Flags().String("logs", path.Join(cwd, "logs"), "where to place build logs")
 
-	viper.BindPFlags(rootCmd.PersistentFlags())
-	viper.BindPFlags(buildCmd.Flags())
+	for _, flags := range []*pflag.FlagSet{rootCmd.PersistentFlags(), buildCmd.Flags()} {
+		err := viper.BindPFlags(flags)
+		if err != nil {
+			logrus.WithField("error", err).Fatal("could not bind flags")
+		}
+	}
 }
 
 func main() {
