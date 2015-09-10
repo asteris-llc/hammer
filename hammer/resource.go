@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/Sirupsen/logrus"
+	"hash"
 	"io/ioutil"
 	"net/http"
 	"path"
@@ -89,21 +90,14 @@ func (s *Resource) Download(p *Package) ([]byte, error) {
 	}()
 
 	// checksum
-	var sum string
-	switch s.HashType {
-	case "md5":
-		summer := md5.New()
-		summer.Write(body)
-		sum = hex.EncodeToString(summer.Sum(nil))
-	case "sha1":
-		summer := sha1.New()
-		summer.Write(body)
-		sum = hex.EncodeToString(summer.Sum(nil))
-	default:
+	sum, err := s.sum(body)
+	if err == ErrBadHashType {
 		logger.WithField("type", s.HashType).Error("bad hash type (try md5 or sha1)")
-		return body, ErrBadHashType
+		return nil, err
+	} else if err != nil {
+		logger.WithField("error", err).Error("could not sum resource")
+		return nil, err
 	}
-
 	if sum != s.Hash {
 		logger.WithFields(logrus.Fields{
 			"provided": s.Hash,
@@ -113,4 +107,24 @@ func (s *Resource) Download(p *Package) ([]byte, error) {
 	}
 
 	return body, err
+}
+
+func (s *Resource) sum(body []byte) (string, error) {
+	var hasher hash.Hash
+
+	switch s.HashType {
+	case "md5":
+		hasher = md5.New()
+	case "sha1":
+		hasher = sha1.New()
+	default:
+		return "", ErrBadHashType
+	}
+
+	_, err := hasher.Write(body)
+	if err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
