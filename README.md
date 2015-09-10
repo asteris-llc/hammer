@@ -108,3 +108,10 @@ First, you'll need to get [FPM](https://github.com/jordansissel/fpm) (which
 should just be `gem install fpm`) and any build tools you need (for example, to
 build RPMs you'll need `rpmbuild`.) Then, `go install
 github.com/asteris-llc/hammer`.
+
+## Contributing
+
+Got a feature you'd like to see? PRs are very welcome. Just make sure that your
+build passes all the checks on
+[gometalinter](https://github.com/alecthomas/gometalinter). Tests are
+appreciated, as well!
