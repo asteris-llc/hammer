@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -165,25 +166,12 @@ func (p *Package) Setup() error {
 	}
 
 	// get the sources and store them in the temporary directory
-	for _, s := range p.Resources {
-		body, err := s.Download(p)
-		if err != nil {
-			return err
-		}
-		err = ioutil.WriteFile(
-			path.Join(p.BuildRoot, s.Name(p)),
-			body,
-			0777,
-		)
-		if err != nil {
-			p.logger.WithFields(logrus.Fields{
-				"error": err,
-				"name":  s.Name(p),
-			}).Error("could not write resource to disk")
-		}
+	err := p.downloadResources()
+	if err != nil {
 		return err
 	}
 
+	// render scripts to disk
 	locations, err := p.Scripts.RenderAndWriteAll(p)
 	if err != nil {
 		return err
@@ -203,6 +191,52 @@ func (p *Package) Setup() error {
 		return err
 	}
 	p.logconsumer = consumer
+
+	return nil
+}
+
+func (p *Package) downloadResources() error {
+	for _, s := range p.Resources {
+		url := url.QueryEscape(s.RenderURL(p))
+		name := s.Name(p)
+		// TODO: check the hash from the content returned from disk, as well. Minor bug.
+		p.logger.WithField("name", name).Debug("checking for resource")
+		content, err := p.cache.Get(url)
+		if err == cache.ErrNoSuchKey {
+			p.logger.WithField("name", name).Debug("resource not found, downloading")
+			content, err = s.Download(p)
+			if err != nil {
+				return err
+			}
+
+			err = p.cache.Set(url, content)
+			if err != nil {
+				p.logger.WithFields(logrus.Fields{
+					"error": err,
+					"name":  name,
+				}).Error("could not cache response")
+				return err
+			}
+		} else if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"name":  name,
+			}).Error("could not get resource from cache")
+			return err
+		}
+
+		err = ioutil.WriteFile(
+			path.Join(p.BuildRoot, s.Name(p)),
+			content,
+			0777,
+		)
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"name":  name,
+			}).Error("could not write resource to disk")
+		}
+	}
 
 	return nil
 }
