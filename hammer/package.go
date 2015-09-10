@@ -98,7 +98,12 @@ func (p *Package) SetTemplate(tmpl *Template) {
 // Package. It takes care of all the stages of the build, including setup and
 // cleanup.
 func (p *Package) BuildAndPackage() error {
-	defer p.Cleanup()
+	defer func() {
+		err := p.Cleanup()
+		if err != nil {
+			p.logger.Warn("did not clean up successfully, there may be residual files in your system")
+		}
+	}()
 	type Stage struct {
 		Name   string
 		Action func() error
