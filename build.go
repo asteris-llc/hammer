@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/asteris-llc/hammer/hammer"
+	"github.com/asteris-llc/hammer/hammer/cache"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
@@ -46,6 +47,14 @@ var (
 
 			if len(packages) == 0 {
 				logrus.Fatal("no packages selected")
+			}
+
+			fsCache, err := cache.NewFSCache(viper.GetString("cache"))
+			if err != nil {
+				logrus.WithField("error", err).Fatal("could not make cache")
+			}
+			for _, pkg := range packages {
+				pkg.SetCache(fsCache)
 			}
 
 			packager := hammer.NewPackager(packages)
