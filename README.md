@@ -1,5 +1,7 @@
 # Hammer
 
+[![Build Status](https://travis-ci.org/asteris-llc/hammer.svg)](https://travis-ci.org/asteris-llc/hammer)
+
 Hammer takes YAML specs and uses them to build packages (with
 [FPM](https://github.com/jordansissel/fpm).) Here's a fairly complete sample
 annotated with comments.
