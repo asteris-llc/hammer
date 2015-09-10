@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	RootCmd = &cobra.Command{
+	rootCmd = &cobra.Command{
 		Use:   "hammer",
 		Short: "hammer builds a bunch of package specs at once",
 		Run: func(cmd *cobra.Command, args []string) {
@@ -24,27 +24,27 @@ var (
 
 func init() {
 	// root and persistent flags
-	RootCmd.PersistentFlags().String("log-level", "info", "one of debug, info, warn, error, or fatal")
-	RootCmd.PersistentFlags().String("log-format", "text", "specify output (text or json)")
+	rootCmd.PersistentFlags().String("log-level", "info", "one of debug, info, warn, error, or fatal")
+	rootCmd.PersistentFlags().String("log-format", "text", "specify output (text or json)")
 
 	// build flags
-	BuildCmd.Flags().String("shell", "bash", "shell to use for executing build scripts")
-	BuildCmd.Flags().String("type", "rpm", "type of package to build (multiple build targets should be separated by commas)")
-	BuildCmd.Flags().Int("concurrent-jobs", runtime.NumCPU(), "number of packages to build at once")
+	buildCmd.Flags().String("shell", "bash", "shell to use for executing build scripts")
+	buildCmd.Flags().String("type", "rpm", "type of package to build (multiple build targets should be separated by commas)")
+	buildCmd.Flags().Int("concurrent-jobs", runtime.NumCPU(), "number of packages to build at once")
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		logrus.WithField("error", err).Warning("could not get working directory")
 	}
-	BuildCmd.Flags().String("search", cwd, "where to look for package definitions")
-	BuildCmd.Flags().String("output", path.Join(cwd, "out"), "where to place output packages")
-	BuildCmd.Flags().String("logs", path.Join(cwd, "logs"), "where to place build logs")
+	buildCmd.Flags().String("search", cwd, "where to look for package definitions")
+	buildCmd.Flags().String("output", path.Join(cwd, "out"), "where to place output packages")
+	buildCmd.Flags().String("logs", path.Join(cwd, "logs"), "where to place build logs")
 
-	viper.BindPFlags(RootCmd.PersistentFlags())
-	viper.BindPFlags(BuildCmd.Flags())
+	viper.BindPFlags(rootCmd.PersistentFlags())
+	viper.BindPFlags(buildCmd.Flags())
 }
 
 func main() {
-	RootCmd.AddCommand(BuildCmd)
-	RootCmd.Execute()
+	rootCmd.AddCommand(buildCmd)
+	rootCmd.Execute()
 }

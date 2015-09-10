@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	BuildCmd = &cobra.Command{
+	buildCmd = &cobra.Command{
 		Use:   "build [package...]",
 		Short: "build packages",
 		Long:  "build all packages by default, unless specific packages are specified",

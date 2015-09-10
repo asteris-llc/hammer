@@ -13,6 +13,8 @@ import (
 	"strings"
 )
 
+// Target describes the output of a build. It has a source (Src) and a
+// destination (Dest), and can be templated and marked as a config file.
 type Target struct {
 	Src      string `yaml:"src"`
 	Dest     string `yaml:"dest"`
@@ -20,6 +22,8 @@ type Target struct {
 	Config   bool   `yaml:"config"`
 }
 
+// Package is the main struct in Hammer. It contains all the (meta-)information
+// needed to produce a package.
 type Package struct {
 	Name         string     `yaml:"name"`
 	Version      string     `yaml:"version"`
@@ -55,6 +59,8 @@ type Package struct {
 	fpm             *FPM
 }
 
+// NewPackageFromYAML loads a package from YAML if it can. It also sets up
+// defaults for build machine information, the logger, and the templater
 func NewPackageFromYAML(content []byte) (*Package, error) {
 	p := new(Package)
 	err := yaml.Unmarshal(content, p)
@@ -74,15 +80,23 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 }
 
 // setters
+
+// SetLogger sets the package logger from a plain logrus Logger, and sets a
+// "name" field before accepting it.
 func (p *Package) SetLogger(logger *logrus.Logger) {
 	p.logger = logger.WithField("name", p.Name)
 }
 
+// SetTemplate sets the default template renderer for the package
 func (p *Package) SetTemplate(tmpl *Template) {
 	p.template = tmpl
 }
 
 // process
+
+// BuildAndPackage is the main function you'll want to call after loading a
+// Package. It takes care of all the stages of the build, including setup and
+// cleanup.
 func (p *Package) BuildAndPackage() error {
 	defer p.Cleanup()
 	type Stage struct {
@@ -109,6 +123,14 @@ func (p *Package) BuildAndPackage() error {
 	return nil
 }
 
+// Setup does all the filesystem work necessary to make sure that the package
+// can be built. This includes:
+//
+// - creating all temporary directories
+// - getting the sources and storing them
+// - rendering and writing all the scripts to disk
+// - setting up the build logging
+// - making sure FPM has an environment it can run in
 func (p *Package) Setup() error {
 	roots := map[string]*string{
 		"build":  &p.BuildRoot,
@@ -166,6 +188,9 @@ func (p *Package) Setup() error {
 	return nil
 }
 
+// Cleanup is basically the opposite function of Setup, although it doesn't have
+// nearly as much work to do. It just recursively removes the temporary
+// directories.
 func (p *Package) Cleanup() error {
 	roots := map[string]string{
 		"build":  p.BuildRoot,
@@ -188,6 +213,9 @@ func (p *Package) Cleanup() error {
 	return nil
 }
 
+// Build runs the build script in the specified shell and build directory. If
+// there is not a build script specified for the package, Build is basically a
+// no-op but will warn about missing the script.
 func (p *Package) Build() error {
 	// perform the build
 	buildScript, ok := p.scriptLocations["build"]
@@ -196,6 +224,7 @@ func (p *Package) Build() error {
 		return nil
 	}
 
+	// TODO: remove the call to viper here in favor of having another piece of configuration in Package
 	cmd := exec.Command(viper.GetString("shell"), buildScript)
 	cmd.Dir = p.BuildRoot
 
@@ -235,6 +264,8 @@ func (p *Package) Build() error {
 	return nil
 }
 
+// Package drives the FPM instance created during Setup to package the output of
+// the Build step.
 func (p *Package) Package() error {
 	for _, outType := range strings.Split(viper.GetString("type"), ",") {
 		p.logger.WithField("type", outType).Info("packaging with FPM")

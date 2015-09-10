@@ -8,11 +8,16 @@ import (
 	"path/filepath"
 )
 
+// Loader looks for Package specs in a given root.
 type Loader struct {
-	Root      string
+	// The loader looks for packages in Root
+	Root string
+
+	// The loader looks for files named the value of Indicator to signify a package
 	Indicator string
 }
 
+// NewLoader returns a Loader with default values set
 func NewLoader(root string) *Loader {
 	return &Loader{
 		Root:      root,
@@ -20,6 +25,7 @@ func NewLoader(root string) *Loader {
 	}
 }
 
+// Load finds all the packages below Root in the filesystem
 func (l *Loader) Load() ([]*Package, error) {
 	logrus.WithField("root", l.Root).Info("loading packages")
 	packages := []*Package{}

@@ -10,10 +10,15 @@ import (
 )
 
 var (
-	ErrFieldRequired     = errors.New("field is required")
+	// ErrFieldRequired is returned when a required field is not set.
+	ErrFieldRequired = errors.New("field is required")
+
+	// ErrInvalidScriptName is returned when a bad script name is set and passed
+	// to FPM.
 	ErrInvalidScriptName = errors.New("invalid script name")
 )
 
+// FPM is a wrapper around the Ruby FPM tool, and will call it in a subprocess.
 type FPM struct {
 	Package *Package
 
@@ -21,6 +26,7 @@ type FPM struct {
 	baseArgs []string
 }
 
+// NewFPM does all necessary setup to run an FPM instance
 func NewFPM(p *Package) (*FPM, error) {
 	fpm := &FPM{
 		Package: p,
@@ -39,6 +45,8 @@ func NewFPM(p *Package) (*FPM, error) {
 	return fpm, nil
 }
 
+// PackageFor runs the packaging process on a given out type ("rpm", for
+// instance). It returns a string of the command combined output.
 func (f *FPM) PackageFor(outType string) (string, error) {
 	// put args and opts all together
 	extra, err := f.extraArgs()
@@ -162,11 +170,11 @@ func (f *FPM) setBaseOpts() error {
 
 	for _, field := range fields {
 		if field.Value == "" {
-			if field.Required {
+			if !field.Required {
+				continue
+			} else {
 				pkg.logger.WithField("field", field.Name).Error(ErrFieldRequired)
 				return ErrFieldRequired
-			} else {
-				continue
 			}
 		}
 
