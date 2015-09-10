@@ -38,6 +38,7 @@ func init() {
 	}
 	BuildCmd.Flags().String("search", cwd, "where to look for package definitions")
 	BuildCmd.Flags().String("output", path.Join(cwd, "out"), "where to place output packages")
+	BuildCmd.Flags().String("logs", path.Join(cwd, "logs"), "where to place build logs")
 
 	viper.BindPFlags(RootCmd.PersistentFlags())
 	viper.BindPFlags(BuildCmd.Flags())

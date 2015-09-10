@@ -43,11 +43,13 @@ type Package struct {
 	ScriptRoot string `yaml:"-"`
 	SpecRoot   string `yaml:"-"`
 	TargetRoot string `yaml:"-"`
+	LogRoot    string `yaml:"-"`
 
 	// information about the machine doing the building
 	CPUs int `yaml:"-"`
 
 	logger          *logrus.Entry
+	logconsumer     LogConsumer
 	template        *Template
 	scriptLocations map[string]string
 	fpm             *FPM
@@ -154,6 +156,13 @@ func (p *Package) Setup() error {
 	}
 	p.fpm = fpm
 
+	// create a log consumer
+	consumer, err := NewFileConsumer(p.Name, p.LogRoot)
+	if err != nil {
+		return err
+	}
+	p.logconsumer = consumer
+
 	return nil
 }
 
@@ -189,12 +198,31 @@ func (p *Package) Build() error {
 
 	cmd := exec.Command(viper.GetString("shell"), buildScript)
 	cmd.Dir = p.BuildRoot
-	out, err := cmd.CombinedOutput()
+
+	// handle out and error
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		p.logger.WithFields(logrus.Fields{
-			"error":  err,
-			"output": string(out),
-		}).Error("build script exited with a non-zero exit code")
+		p.logger.WithField("error", err).Error("could not read command stdout")
+		return err
+	}
+	go p.logconsumer.MustHandleStream("stdout", stdout)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		p.logger.WithField("error", err).Error("could not read command stderr")
+		return err
+	}
+	go p.logconsumer.MustHandleStream("stderr", stderr)
+
+	err = cmd.Start()
+	if err != nil {
+		p.logger.WithField("error", err).Error("build script could not start")
+		return err
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		p.logger.WithField("error", err).Error("build script exited with a non-zero exit code")
 		return err
 	}
 

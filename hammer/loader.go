@@ -46,6 +46,7 @@ func (l *Loader) Load() ([]*Package, error) {
 		path, _ := filepath.Split(pathName)
 		pkg.SpecRoot = path
 		pkg.OutputRoot = viper.GetString("output")
+		pkg.LogRoot = viper.GetString("logs")
 
 		packages = append(packages, pkg)
 
