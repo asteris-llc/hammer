@@ -51,5 +51,8 @@ func init() {
 
 func main() {
 	rootCmd.AddCommand(buildCmd)
-	rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		logrus.WithField("error", err).Fatal("exited with error")
+	}
 }
