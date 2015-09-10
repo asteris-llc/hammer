@@ -163,11 +163,18 @@ func (p *Package) Setup() error {
 		if err != nil {
 			return err
 		}
-		ioutil.WriteFile(
+		err = ioutil.WriteFile(
 			path.Join(p.BuildRoot, s.Name(p)),
 			body,
 			0777,
 		)
+		if err != nil {
+			p.logger.WithFields(logrus.Fields{
+				"error": err,
+				"name":  s.Name(p),
+			}).Error("could not write resource to disk")
+		}
+		return err
 	}
 
 	locations, err := p.Scripts.RenderAndWriteAll(p)
