@@ -81,7 +81,12 @@ func (s *Resource) Download(p *Package) ([]byte, error) {
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
+	defer func() {
+		err := resp.Body.Close()
+		if err != nil {
+			logger.WithField("error", err).Warn("could not close response body")
+		}
+	}()
 
 	// checksum
 	var sum string
