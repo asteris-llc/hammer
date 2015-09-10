@@ -9,7 +9,7 @@ go:
 
 install:
   - go get -v -t ./...
-  - go get github.com/alecthomas/gometalinter
+  - go get -v github.com/alecthomas/gometalinter
 
 before_script:
   - gometalinter --install
