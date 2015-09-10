@@ -148,24 +148,44 @@ func (f *FPM) setBaseOpts() error {
 		"-p", f.Package.OutputRoot,
 	}
 
-	pkg := f.Package
+	type Source func() ([]string, error)
+	fieldSources := []Source{
+		f.baseFields,
+		f.baseDependencies,
+		f.baseScripts,
+		f.baseConfigs,
+	}
 
-	// fields
+	for _, source := range fieldSources {
+		newOpts, err := source()
+		if err != nil {
+			return err
+		}
+		opts = append(opts, newOpts...)
+	}
+
+	f.baseOpts = opts
+	return nil
+}
+
+func (f *FPM) baseFields() ([]string, error) {
+	opts := []string{}
+
 	type field struct {
 		Name     string
 		Value    string
 		Required bool
 	}
 	fields := []field{
-		{"name", pkg.Name, true},
-		{"version", pkg.Version, true},
-		{"iteration", pkg.Iteration, true},
-		{"epoch", pkg.Epoch, false},
-		{"license", pkg.License, false},
-		{"vendor", pkg.Vendor, false},
-		{"description", pkg.Description, false},
-		{"url", pkg.URL, false},
-		{"architecture", pkg.Architecture, false},
+		{"name", f.Package.Name, true},
+		{"version", f.Package.Version, true},
+		{"iteration", f.Package.Iteration, true},
+		{"epoch", f.Package.Epoch, false},
+		{"license", f.Package.License, false},
+		{"vendor", f.Package.Vendor, false},
+		{"description", f.Package.Description, false},
+		{"url", f.Package.URL, false},
+		{"architecture", f.Package.Architecture, false},
 	}
 
 	for _, field := range fields {
@@ -173,67 +193,83 @@ func (f *FPM) setBaseOpts() error {
 			if !field.Required {
 				continue
 			} else {
-				pkg.logger.WithField("field", field.Name).Error(ErrFieldRequired)
-				return ErrFieldRequired
+				f.Package.logger.WithField("field", field.Name).Error(ErrFieldRequired)
+				return opts, ErrFieldRequired
 			}
 		}
 
-		templated, err := pkg.template.Render(field.Value)
+		templated, err := f.Package.template.Render(field.Value)
 		if err != nil {
-			pkg.logger.WithFields(logrus.Fields{
+			f.Package.logger.WithFields(logrus.Fields{
 				"field": field.Name,
 				"error": err,
 			}).Error("failed to render field as template")
-			return err
+			return opts, err
 		}
 
 		opts = append(opts, "--"+field.Name, templated.String())
 	}
 
-	// dependencies
-	for _, rawDepend := range pkg.Depends {
-		depend, err := pkg.template.Render(rawDepend)
+	return opts, nil
+}
+
+func (f *FPM) baseDependencies() ([]string, error) {
+	opts := []string{}
+
+	for _, rawDepend := range f.Package.Depends {
+		depend, err := f.Package.template.Render(rawDepend)
 		if err != nil {
-			pkg.logger.WithFields(logrus.Fields{
+			f.Package.logger.WithFields(logrus.Fields{
 				"error": err,
 				"raw":   rawDepend,
 			}).Error("failed to render dependency as template")
+			return opts, err
 		}
 		opts = append(opts, "--depends", depend.String())
 	}
 
-	// scripts
-	for name, location := range pkg.scriptLocations {
+	return opts, nil
+}
+
+func (f *FPM) baseScripts() ([]string, error) {
+	opts := []string{}
+
+	for name, location := range f.Package.scriptLocations {
 		if name == "build" {
 			continue
 		}
 
 		if name != "before-install" && name != "after-install" && name != "before-remove" && name != "after-remove" && name != "before-upgrade" && name != "after-upgrade" {
-			pkg.logger.WithFields(logrus.Fields{
+			f.Package.logger.WithFields(logrus.Fields{
 				"script": name,
 			}).Error(ErrInvalidScriptName)
+			return opts, ErrInvalidScriptName
 		}
 
 		opts = append(opts, "--"+name, location)
 	}
 
-	// config files
-	for i, target := range pkg.Targets {
+	return opts, nil
+}
+
+func (f *FPM) baseConfigs() ([]string, error) {
+	opts := []string{}
+
+	for i, target := range f.Package.Targets {
 		if !target.Config {
 			continue
 		}
 
-		dest, err := pkg.template.Render(target.Dest)
+		dest, err := f.Package.template.Render(target.Dest)
 		if err != nil {
-			pkg.logger.WithField("index", i).Error("error templating target destination")
-			return err
+			f.Package.logger.WithField("index", i).Error("error templating target destination")
+			return opts, err
 		}
 
 		opts = append(opts, "--config-files", dest.String())
 	}
 
-	f.baseOpts = opts
-	return nil
+	return opts, nil
 }
 
 func (f *FPM) optsForType(t string) []string {
