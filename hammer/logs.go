@@ -46,11 +46,13 @@ func (fc *FileConsumer) HandleStream(description string, stream io.Reader) error
 		return err
 	}
 
-	newline := []byte("\n")
+	newline := byte('\n')
 	scanner := bufio.NewScanner(stream)
 	for scanner.Scan() {
-		file.Write(scanner.Bytes())
-		file.Write(newline)
+		_, err := file.Write(append(scanner.Bytes(), newline))
+		if err != nil {
+			return err
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return err
