@@ -48,6 +48,7 @@ func (p *Packager) startWorker(ctx *workerContext) {
 // their given logger, and therefor only returns a success or failure.
 func (p *Packager) Build(ctx context.Context, concurrency int) (success bool) {
 	total := len(p.packages)
+	success = true
 
 	wc := &workerContext{
 		packages: make(chan *Package, total),
