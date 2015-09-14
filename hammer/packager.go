@@ -35,7 +35,22 @@ func (p *Packager) startWorker(ctx *workerContext) {
 	for {
 		select {
 		case pkg := <-ctx.packages:
-			ctx.errors <- pkg.BuildAndPackage()
+			err := pkg.BuildAndPackage()
+			ctx.errors <- err
+
+			// deal with chidlren on the build queue. These should be added here
+			// instead of in Build because they need to be taken care of *after* the
+			// parent.
+			if err != nil {
+				// note i = 1. Skipping the first, because we already have an error.
+				for i := pkg.TotalPackages() - 1; i > 0; i-- {
+					ctx.errors <- nil
+				}
+			} else {
+				for _, child := range pkg.Children {
+					ctx.packages <- child
+				}
+			}
 
 		case <-ctx.ctx.Done():
 			return
@@ -47,7 +62,11 @@ func (p *Packager) startWorker(ctx *workerContext) {
 // level. It assumes that the packages will report errors to the user through
 // their given logger, and therefor only returns a success or failure.
 func (p *Packager) Build(ctx context.Context, concurrency int) (success bool) {
-	total := len(p.packages)
+	total := 0
+	for _, pkg := range p.packages {
+		total += pkg.TotalPackages()
+	}
+
 	success = true
 
 	wc := &workerContext{

@@ -23,6 +23,7 @@ func NewTemplate(pkg *Package) *Template {
 		"include":         t.Include,
 		"includeTemplate": t.IncludeTemplate,
 		"specFile":        t.SpecFile,
+		"top":             t.Top,
 	}
 
 	return t
@@ -83,4 +84,15 @@ func (t *Template) BuildFile(name string) string {
 // `/etc/yourpackage/conf.d`)
 func (t *Template) Empty() string {
 	return t.Package.Empty + "/"
+}
+
+// Top (top) is a template function that returns the top-level package (for use
+// in conjuction with the "multi" field)
+func (t *Template) Top() *Package {
+	p := t.Package
+	for p.Parent != nil {
+		p = p.Parent
+	}
+
+	return p
 }

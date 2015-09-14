@@ -53,6 +53,10 @@ func (l *Loader) Load() ([]*Package, error) {
 		pkg.SpecRoot = path
 		pkg.OutputRoot = viper.GetString("output")
 		pkg.LogRoot = viper.GetString("logs")
+		err = pkg.ExpandRecursive(nil)
+		if err != nil {
+			return err
+		}
 
 		packages = append(packages, pkg)
 

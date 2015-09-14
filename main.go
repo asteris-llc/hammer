@@ -30,7 +30,6 @@ func init() {
 
 	// build flags
 	buildCmd.Flags().String("shell", "bash", "shell to use for executing build scripts")
-	buildCmd.Flags().String("type", "rpm", "type of package to build (multiple build targets should be separated by commas)")
 	buildCmd.Flags().Int("concurrent-jobs", runtime.NumCPU(), "number of packages to build at once")
 
 	cwd, err := os.Getwd()
