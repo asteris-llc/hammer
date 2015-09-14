@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path"
 	"runtime"
-	"strings"
 )
 
 // Target describes the output of a build. It has a source (Src) and a
@@ -329,17 +328,14 @@ func (p *Package) Build() error {
 // Package drives the FPM instance created during Setup to package the output of
 // the Build step.
 func (p *Package) Package() error {
-	for _, outType := range strings.Split(viper.GetString("type"), ",") {
-		p.logger.WithField("type", outType).Info("packaging with FPM")
-		out, err := p.fpm.PackageFor(outType)
-		if err != nil {
-			p.logger.WithFields(logrus.Fields{
-				"error":   err,
-				"out":     string(out),
-				"outType": outType,
-			}).Error("failed to package")
-			return err
-		}
+	out, err := p.fpm.PackageFor(p.Type)
+	if err != nil {
+		p.logger.WithFields(logrus.Fields{
+			"error":   err,
+			"out":     string(out),
+			"outType": p.Type,
+		}).Error("failed to package")
+		return err
 	}
 
 	return nil
