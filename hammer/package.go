@@ -94,6 +94,9 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 		return p, err
 	}
 
+	// now that name is set, set logger...
+	p.logger = p.logger.WithField("name", p.Name)
+
 	return p, nil
 }
 
