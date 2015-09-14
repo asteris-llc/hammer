@@ -4,6 +4,11 @@ import (
 	"errors"
 )
 
+var (
+	errBadValue     = errors.New("bad value")
+	errUnknownValue = errors.New("don't know how to handle value")
+)
+
 // ExpandRecursive fills in inheritance for the Multi field
 func (p *Package) ExpandRecursive(parent *Package) error {
 	p.Parent = parent // should be called with nil as a parent for the top level
@@ -16,7 +21,10 @@ func (p *Package) ExpandRecursive(parent *Package) error {
 		}
 
 		p.Children = append(p.Children, grandchild)
-		grandchild.ExpandRecursive(p)
+		err = grandchild.ExpandRecursive(p)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -24,12 +32,14 @@ func (p *Package) ExpandRecursive(parent *Package) error {
 
 func (p *Package) expandSingle(child *Package) (*Package, error) {
 	base := NewPackage()
+	tmpl := base.template
 
 	// copy fields
 	*base = *p
 
 	// reset fields we should never inherit
 	base.Multi = []*Package{}
+	base.template = tmpl
 
 	scripts := Scripts{}
 	for name, script := range base.Scripts {
@@ -42,95 +52,103 @@ func (p *Package) expandSingle(child *Package) (*Package, error) {
 	}
 	base.Scripts = scripts
 
-	// single-value fields
-	type Field struct {
-		child interface{}
-		base  interface{}
-	}
-	fields := []Field{
-		{child.Architecture, &base.Architecture},
-		{child.Depends, &base.Depends},
-		{child.Description, &base.Description},
-		{child.Epoch, &base.Epoch},
-		{child.ExtraArgs, &base.ExtraArgs},
-		{child.Iteration, &base.Iteration},
-		{child.License, &base.License},
-		{child.Multi, &base.Multi},
-		{child.Name, &base.Name},
-		{child.Resources, &base.Resources},
-		{child.Scripts, &base.Scripts},
-		{child.Targets, &base.Targets},
-		{child.Type, &base.Type},
-		{child.URL, &base.URL},
-		{child.Vendor, &base.Vendor},
-		{child.Version, &base.Version},
-	}
-	for _, field := range fields {
-		switch value := field.child.(type) {
-		case string: // basic values
-			if value != "" {
-				target, ok := field.base.(*string)
-				if !ok {
-					return nil, errors.New("bad value for field base")
-				}
-				*target = value
-			}
-
-		case []string: // dependencies
-			if len(value) != 0 {
-				target, ok := field.base.(*[]string)
-				if !ok {
-					return nil, errors.New("bad value for field base")
-				}
-				*target = value
-			}
-
-		case []Resource:
-			if len(value) != 0 {
-				target, ok := field.base.(*[]Resource)
-				if !ok {
-					return nil, errors.New("bad value for field base")
-				}
-				*target = value
-			}
-
-		case []Target:
-			if len(value) != 0 {
-				target, ok := field.base.(*[]Target)
-				if !ok {
-					return nil, errors.New("bad value for field base")
-				}
-				*target = value
-			}
-
-		case []*Package:
-			if len(value) != 0 {
-				target, ok := field.base.(*[]*Package)
-				if !ok {
-					return nil, errors.New("bad value for field base")
-				}
-				*target = value
-			}
-
-		case Scripts:
-			target, ok := field.base.(*Scripts)
-			if !ok {
-				return nil, errors.New("bad value for field base")
-			}
-
-			for name, script := range value {
-				scripts[name] = script
-			}
-
-			*target = scripts
-
-		default:
-			return nil, errors.New("don't know how to handle value")
-		}
+	// copy fields
+	err := base.copyFieldsFrom(child)
+	if err != nil {
+		return base, err
 	}
 
 	// set stuff via methods
 	base.logger = p.logger.WithField("name", base.Name)
 
 	return base, nil
+}
+
+func (p *Package) copyFieldsFrom(other *Package) error {
+	// single-value fields
+	type Field struct {
+		other interface{}
+		p     interface{}
+	}
+	fields := []Field{
+		{other.Architecture, &p.Architecture},
+		{other.Depends, &p.Depends},
+		{other.Description, &p.Description},
+		{other.Epoch, &p.Epoch},
+		{other.ExtraArgs, &p.ExtraArgs},
+		{other.Iteration, &p.Iteration},
+		{other.License, &p.License},
+		{other.Multi, &p.Multi},
+		{other.Name, &p.Name},
+		{other.Resources, &p.Resources},
+		{other.Scripts, &p.Scripts},
+		{other.Targets, &p.Targets},
+		{other.Type, &p.Type},
+		{other.URL, &p.URL},
+		{other.Vendor, &p.Vendor},
+		{other.Version, &p.Version},
+	}
+	for _, field := range fields {
+		switch value := field.other.(type) {
+		case string: // basic values
+			if value != "" {
+				target, ok := field.p.(*string)
+				if !ok {
+					return errBadValue
+				}
+				*target = value
+			}
+
+		case []string: // dependencies
+			if len(value) != 0 {
+				target, ok := field.p.(*[]string)
+				if !ok {
+					return errBadValue
+				}
+				*target = value
+			}
+
+		case []Resource:
+			if len(value) != 0 {
+				target, ok := field.p.(*[]Resource)
+				if !ok {
+					return errBadValue
+				}
+				*target = value
+			}
+
+		case []Target:
+			if len(value) != 0 {
+				target, ok := field.p.(*[]Target)
+				if !ok {
+					return errBadValue
+				}
+				*target = value
+			}
+
+		case []*Package:
+			if len(value) != 0 {
+				target, ok := field.p.(*[]*Package)
+				if !ok {
+					return errBadValue
+				}
+				*target = value
+			}
+
+		case Scripts:
+			target, ok := field.p.(*Scripts)
+			if !ok {
+				return errBadValue
+			}
+
+			for name, script := range value {
+				(*target)[name] = script
+			}
+
+		default:
+			return errUnknownValue
+		}
+	}
+
+	return nil
 }
