@@ -344,3 +344,12 @@ func (p *Package) Package() error {
 
 	return nil
 }
+
+// TotalPackages is the total count of packages for this and all children.
+func (p *Package) TotalPackages() int {
+	count := 1
+	for _, pkg := range p.Children {
+		count += pkg.TotalPackages()
+	}
+	return count
+}
