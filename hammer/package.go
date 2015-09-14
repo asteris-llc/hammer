@@ -27,20 +27,25 @@ type Target struct {
 // Package is the main struct in Hammer. It contains all the (meta-)information
 // needed to produce a package.
 type Package struct {
-	Name         string     `yaml:"name"`
-	Version      string     `yaml:"version"`
-	Iteration    string     `yaml:"iteration"`
-	Epoch        string     `yaml:"epoch"`
-	License      string     `yaml:"license"`
-	Vendor       string     `yaml:"vendor"`
-	URL          string     `yaml:"url"`
-	Description  string     `yaml:"description"`
-	Architecture string     `yaml:"architecture"`
-	Depends      []string   `yaml:"depends"`
-	Resources    []Resource `yaml:"resources"`
-	Targets      []Target   `yaml:"targets"`
-	Scripts      Scripts    `yaml:"scripts"`
-	ExtraArgs    string     `yaml:"extra-args"`
+	Architecture string     `yaml:"architecture,omitempty"`
+	Depends      []string   `yaml:"depends,omitempty"`
+	Description  string     `yaml:"description,omitempty"`
+	Epoch        string     `yaml:"epoch,omitempty"`
+	ExtraArgs    string     `yaml:"extra-args,omitempty"`
+	Iteration    string     `yaml:"iteration,omitempty"`
+	License      string     `yaml:"license,omitempty"`
+	Name         string     `yaml:"name,omitempty"`
+	Resources    []Resource `yaml:"resources,omitempty"`
+	Scripts      Scripts    `yaml:"scripts,omitempty"`
+	Targets      []Target   `yaml:"targets,omitempty"`
+	Type         string     `yaml:"type,omitempty"`
+	URL          string     `yaml:"url,omitempty"`
+	Vendor       string     `yaml:"vendor,omitempty"`
+	Version      string     `yaml:"version,omitempty"`
+
+	// Multi parametrizes builds by expanding recursively. This information is
+	// then moved to Parent and Children.
+	Multi []*Package `yaml:"multi,omitempty"`
 
 	// various roots
 	BuildRoot  string `yaml:"-"`
@@ -51,15 +56,19 @@ type Package struct {
 	TargetRoot string `yaml:"-"`
 	LogRoot    string `yaml:"-"`
 
+	// graph of builds
+	Parent   *Package   `yaml:"-"`
+	Children []*Package `yaml:"-"`
+
 	// information about the machine doing the building
 	CPUs int `yaml:"-"`
 
 	cache           cache.Cache
-	logger          *logrus.Entry
-	logconsumer     LogConsumer
-	template        *Template
-	scriptLocations map[string]string
 	fpm             *FPM
+	logconsumer     LogConsumer
+	logger          *logrus.Entry
+	scriptLocations map[string]string
+	template        *Template
 }
 
 // NewPackageFromYAML loads a package from YAML if it can. It also sets up
