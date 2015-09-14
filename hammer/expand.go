@@ -2,7 +2,6 @@ package hammer
 
 import (
 	"errors"
-	"fmt"
 )
 
 // ExpandRecursive fills in inheritance for the Multi field
@@ -111,7 +110,6 @@ func (p *Package) expandSingle(child *Package) (*Package, error) {
 					return nil, errors.New("bad value for field base")
 				}
 				*target = value
-				fmt.Println(value)
 			}
 
 		case Scripts:
