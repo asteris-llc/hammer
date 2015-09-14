@@ -70,15 +70,10 @@ type Package struct {
 	template        *Template
 }
 
-// NewPackageFromYAML loads a package from YAML if it can. It also sets up
-// defaults for build machine information, the logger, and the templater
-func NewPackageFromYAML(content []byte) (*Package, error) {
+// NewPackage sets up defaults for build machine information, the logger, and
+// the templater
+func NewPackage() *Package {
 	p := new(Package)
-	err := yaml.Unmarshal(content, p)
-
-	if err != nil {
-		return p, err
-	}
 
 	// machine information
 	p.CPUs = runtime.NumCPU()
@@ -86,6 +81,18 @@ func NewPackageFromYAML(content []byte) (*Package, error) {
 	// private fields
 	p.SetLogger(logrus.StandardLogger())
 	p.SetTemplate(NewTemplate(p))
+
+	return p
+}
+
+// NewPackageFromYAML loads a package from YAML if it can
+func NewPackageFromYAML(content []byte) (*Package, error) {
+	p := NewPackage()
+	err := yaml.Unmarshal(content, p)
+
+	if err != nil {
+		return p, err
+	}
 
 	return p, nil
 }
