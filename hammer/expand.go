@@ -24,7 +24,7 @@ func (p *Package) ExpandRecursive(parent *Package) error {
 }
 
 func (p *Package) expandSingle(child *Package) (*Package, error) {
-	base := &Package{}
+	base := NewPackage()
 
 	// copy fields
 	*base = *p
@@ -130,6 +130,9 @@ func (p *Package) expandSingle(child *Package) (*Package, error) {
 			return nil, errors.New("don't know how to handle value")
 		}
 	}
+
+	// set stuff via methods
+	base.logger = p.logger.WithField("name", base.Name)
 
 	return base, nil
 }
