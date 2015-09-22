@@ -36,7 +36,7 @@ func init() {
 	if err != nil {
 		logrus.WithField("error", err).Warning("could not get working directory")
 	}
-	buildCmd.Flags().String("search", cwd, "where to look for package definitions")
+	rootCmd.PersistentFlags().String("search", cwd, "where to look for package definitions")
 	buildCmd.Flags().String("output", path.Join(cwd, "out"), "where to place output packages")
 	buildCmd.Flags().String("logs", path.Join(cwd, "logs"), "where to place build logs")
 	buildCmd.Flags().String("cache", path.Join(cwd, ".hammer-cache"), "where to cache downloads")
@@ -50,7 +50,7 @@ func init() {
 }
 
 func main() {
-	rootCmd.AddCommand(buildCmd)
+	rootCmd.AddCommand(buildCmd, queryCmd)
 	err := rootCmd.Execute()
 	if err != nil {
 		logrus.WithField("error", err).Fatal("exited with error")

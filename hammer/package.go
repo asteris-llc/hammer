@@ -1,6 +1,7 @@
 package hammer
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/asteris-llc/hammer/hammer/cache"
@@ -111,6 +112,11 @@ func (p *Package) SetLogger(logger *logrus.Logger) {
 // SetTemplate sets the default template renderer for the package
 func (p *Package) SetTemplate(tmpl *Template) {
 	p.template = tmpl
+}
+
+// Render maybe renders a template string in the context of this package.
+func (p *Package) Render(tmpl string) (bytes.Buffer, error) {
+	return p.template.Render(tmpl)
 }
 
 // SetCache sets the cache for the package
