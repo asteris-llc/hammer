@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -14,10 +15,12 @@ import (
 type LogConsumer interface {
 	MustHandleStream(string, io.Reader)
 	HandleStream(string, io.Reader) error
+	Replay(string) ([]byte, error)
 }
 
 // FileConsumer streams logs to disk, line by line.
 type FileConsumer struct {
+	ID     string
 	Name   string
 	Output string
 }
@@ -30,18 +33,26 @@ func NewFileConsumer(name string, path string) (LogConsumer, error) {
 		return nil, err
 	}
 
-	return &FileConsumer{name, path}, nil
+	return &FileConsumer{time.Now().Format(time.RFC3339), name, path}, nil
+}
+
+// Replay gives a current replay of the logs from a description
+func (fc *FileConsumer) Replay(description string) ([]byte, error) {
+	return ioutil.ReadFile(fc.Location(description))
+}
+
+// Location gives the destination location of a named string
+func (fc *FileConsumer) Location(description string) string {
+	return path.Join(
+		fc.Output,
+		fmt.Sprintf("%s-%s-%s.log", fc.Name, description, fc.ID),
+	)
 }
 
 // HandleStream takes a description of a stream and the stream itself and writes
 // it line-by-line to disk.
 func (fc *FileConsumer) HandleStream(description string, stream io.Reader) error {
-	now := time.Now().Format(time.RFC3339)
-
-	file, err := os.Create(path.Join(
-		fc.Output,
-		fmt.Sprintf("%s-%s-%s.log", fc.Name, description, now),
-	))
+	file, err := os.Create(fc.Location(description))
 	if err != nil {
 		return err
 	}
