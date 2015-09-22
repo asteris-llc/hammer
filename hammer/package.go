@@ -328,7 +328,21 @@ func (p *Package) Build() error {
 
 	err = cmd.Wait()
 	if err != nil {
-		p.logger.WithField("error", err).Error("build script exited with a non-zero exit code")
+		stdout, err := p.logconsumer.Replay("stdout")
+		if err != nil {
+			p.logger.WithField("error", err).Error("build script exited and could not read stdout")
+		}
+
+		stderr, err := p.logconsumer.Replay("stderr")
+		if err != nil {
+			p.logger.WithField("error", err).Error("build script exited and could not read stdout")
+		}
+
+		p.logger.WithFields(logrus.Fields{
+			"error":  err,
+			"stdout": string(stdout),
+			"stderr": string(stderr),
+		}).Error("build script exited with a non-zero exit code")
 		return err
 	}
 
