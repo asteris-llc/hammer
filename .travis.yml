@@ -7,13 +7,6 @@ go:
   - 1.5
   - tip
 
-install:
-  - go get -v -t ./...
-  - go get -v github.com/alecthomas/gometalinter
+install: go get -v -t ./...
 
-before_script:
-  - gometalinter --install
-
-script:
-  - go test -v ./...
-  - gometalinter -D gotype --tests . ./hammer/... --cyclo-over=21
+script: go test -v ./...
