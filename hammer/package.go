@@ -358,6 +358,11 @@ func (p *Package) Build() error {
 // Package drives the FPM instance created during Setup to package the output of
 // the Build step.
 func (p *Package) Package() error {
+	if p.Type == "" {
+		p.logger.Warn("type not set, skipping packaging")
+		return nil
+	}
+
 	out, err := p.fpm.PackageFor(p.Type)
 	if err != nil {
 		p.logger.WithFields(logrus.Fields{
