@@ -10,6 +10,9 @@ import (
 	"runtime"
 )
 
+const Name = "hammer"
+const Version = "0.2"
+
 var (
 	rootCmd = &cobra.Command{
 		Use:   "hammer",
