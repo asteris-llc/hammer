@@ -3,6 +3,7 @@ package hammer
 import (
 	"crypto/md5"
 	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"github.com/Sirupsen/logrus"
@@ -117,6 +118,10 @@ func (s *Resource) sum(body []byte) (string, error) {
 		hasher = md5.New()
 	case "sha1":
 		hasher = sha1.New()
+	case "sha256":
+		hasher = sha256.New()
+	case "sha224":
+		hasher = sha256.New224()
 	default:
 		return "", ErrBadHashType
 	}

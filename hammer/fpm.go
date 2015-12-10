@@ -143,9 +143,18 @@ func (f *FPM) setBaseArgs() error {
 }
 
 func (f *FPM) setBaseOpts() error {
-	opts := []string{
-		"-s", "dir",
-		"-p", f.Package.OutputRoot,
+	var opts []string
+
+	if len(f.Package.Targets) == 0 {
+		opts = []string{
+			"-s", "empty",
+			"-p", f.Package.OutputRoot,
+		}
+	} else {
+		opts = []string{
+			"-s", "dir",
+			"-p", f.Package.OutputRoot,
+		}
 	}
 
 	type Source func() ([]string, error)
