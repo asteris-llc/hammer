@@ -17,5 +17,6 @@ ENV PATH $PATH:$GOPATH/bin
 RUN gem install fpm
 RUN go get github.com/asteris-llc/hammer
 
-WORKDIR /home/pkgs
+VOLUME /out
+WORKDIR /out
 CMD hammer build
