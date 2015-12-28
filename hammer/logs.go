@@ -16,6 +16,7 @@ type LogConsumer interface {
 	MustHandleStream(string, io.Reader)
 	HandleStream(string, io.Reader) error
 	Replay(string) ([]byte, error)
+	NewLogFile(string) (*os.File, error)
 }
 
 // FileConsumer streams logs to disk, line by line.
@@ -78,4 +79,13 @@ func (fc *FileConsumer) MustHandleStream(description string, stream io.Reader) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (fc *FileConsumer) NewLogFile(description string) (*os.File, error) {
+	file, err := os.Create(fc.Location(description))
+	if err != nil {
+		return file, err
+	}
+
+	return file, nil
 }
