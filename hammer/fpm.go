@@ -161,6 +161,7 @@ func (f *FPM) setBaseOpts() error {
 	fieldSources := []Source{
 		f.baseFields,
 		f.baseDependencies,
+		f.baseObsoletes,
 		f.baseScripts,
 		f.baseConfigs,
 	}
@@ -235,6 +236,24 @@ func (f *FPM) baseDependencies() ([]string, error) {
 			return opts, err
 		}
 		opts = append(opts, "--depends", depend.String())
+	}
+
+	return opts, nil
+}
+
+func (f *FPM) baseObsoletes() ([]string, error) {
+	opts := []string{}
+
+	for _, rawObsolete := range f.Package.Obsoletes {
+		obsolete, err := f.Package.template.Render(rawObsolete)
+		if err != nil {
+			f.Package.logger.WithFields(logrus.Fields{
+				"error": err,
+				"raw":   rawObsolete,
+			}).Error("failed to render obsolete as template")
+			return opts, err
+		}
+		opts = append(opts, "--replaces", obsolete.String())
 	}
 
 	return opts, nil

@@ -35,6 +35,7 @@ type Package struct {
 	Iteration    string     `yaml:"iteration,omitempty"`
 	License      string     `yaml:"license,omitempty"`
 	Name         string     `yaml:"name,omitempty"`
+	Obsoletes    []string   `yaml:"obsoletes,omitempty"`
 	Resources    []Resource `yaml:"resources,omitempty"`
 	Scripts      Scripts    `yaml:"scripts,omitempty"`
 	Targets      []Target   `yaml:"targets,omitempty"`
