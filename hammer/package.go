@@ -307,19 +307,18 @@ func (p *Package) Build() error {
 	cmd.Dir = p.BuildRoot
 
 	// handle out and error
-	stdout, err := cmd.StdoutPipe()
+	var err error
+	cmd.Stdout, err = p.logconsumer.NewLogFile("stdout")
 	if err != nil {
-		p.logger.WithField("error", err).Error("could not read command stdout")
+		p.logger.WithField("error", err).Error("could not create stdout log")
 		return err
 	}
-	go p.logconsumer.MustHandleStream("stdout", stdout)
 
-	stderr, err := cmd.StderrPipe()
+	cmd.Stderr, err = p.logconsumer.NewLogFile("stderr")
 	if err != nil {
-		p.logger.WithField("error", err).Error("could not read command stderr")
+		p.logger.WithField("error", err).Error("could not create stderr log")
 		return err
 	}
-	go p.logconsumer.MustHandleStream("stderr", stderr)
 
 	err = cmd.Start()
 	if err != nil {
