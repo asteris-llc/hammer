@@ -1,14 +1,15 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/asteris-llc/hammer/hammer"
 	"github.com/asteris-llc/hammer/hammer/cache"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
-	"os"
-	"os/signal"
 )
 
 var (
@@ -62,6 +63,11 @@ var (
 			err = packager.EnsureOutputDir(viper.GetString("output"))
 			if err != nil {
 				logrus.WithField("error", err).Fatal("could not create output directory")
+			}
+
+			err = packager.EnsureOutputDir(viper.GetString("logs"))
+			if err != nil {
+				logrus.WithError(err).Fatal("could not create logs directory")
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
