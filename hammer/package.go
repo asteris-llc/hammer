@@ -69,6 +69,7 @@ type Package struct {
 	logger          *logrus.Entry
 	scriptLocations map[string]string
 	template        *Template
+	StreamLogs      bool `yaml:"-"`
 }
 
 // NewPackage sets up defaults for build machine information, the logger, and
@@ -307,14 +308,21 @@ func (p *Package) Build() error {
 
 	rollup, err := NewRollupConsumer(logger)
 	if err != nil {
-		p.logger.WithError(err).Error("could not start a log rollup consumer")
+		p.logger.WithError(err).Error("could not start a rollup log consumer")
 		return err
 	}
 
 	file, err := NewFileConsumer(logger, p.LogRoot, p.Name)
 	if err != nil {
-		p.logger.WithError(err).Error("could not start a file consumer")
+		p.logger.WithError(err).Error("could not start a file log consumer")
 		return err
+	}
+
+	if p.StreamLogs {
+		if err := StdIOConsumer(logger); err != nil {
+			p.logger.WithError(err).Error("could not start a stdio log consumer")
+			return err
+		}
 	}
 
 	if err := logger.Start(); err != nil {

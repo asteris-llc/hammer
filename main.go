@@ -1,13 +1,14 @@
 package main
 
 import (
+	"os"
+	"path"
+	"runtime"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"os"
-	"path"
-	"runtime"
 )
 
 var (
@@ -31,6 +32,7 @@ func init() {
 	// build flags
 	buildCmd.Flags().String("shell", "bash", "shell to use for executing build scripts")
 	buildCmd.Flags().Int("concurrent-jobs", runtime.NumCPU(), "number of packages to build at once")
+	buildCmd.Flags().String("stream-logs-for", "", "stream logs from a single package")
 
 	cwd, err := os.Getwd()
 	if err != nil {
