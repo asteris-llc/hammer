@@ -161,7 +161,7 @@ func StdIOConsumer(p *ProcessLogger) error {
 
 func replayToStdIO(src chan []byte, dest io.Writer) {
 	for line := range src {
-		dest.Write(line)
+		fmt.Fprintln(dest, string(line))
 	}
 }
 
@@ -213,10 +213,7 @@ func (f *FileConsumer) handle(filename string, src chan []byte) {
 	}
 	defer file.Close()
 
-	fmt.Println("created", filename)
-
 	for line := range src {
-		fmt.Println("file handling line", string(line))
 		_, err = file.Write(line)
 		if err != nil {
 			f.errs <- err
