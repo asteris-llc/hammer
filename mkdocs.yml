@@ -1,0 +1,5 @@
+site_name: Hammer
+pages:
+  - Hammer: index.md
+  - Spec: spec.md
+theme: readthedocs
