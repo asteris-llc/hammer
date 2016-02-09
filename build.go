@@ -1,14 +1,15 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/asteris-llc/hammer/hammer"
 	"github.com/asteris-llc/hammer/hammer/cache"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
-	"os"
-	"os/signal"
 )
 
 var (
@@ -23,6 +24,7 @@ var (
 				logrus.WithField("error", err).Fatal("could not load packages")
 			}
 
+			// find packages specified in command line arguments
 			var packages []*hammer.Package
 			if len(packageNames) == 0 {
 				packages = loaded
@@ -49,6 +51,16 @@ var (
 				logrus.Fatal("no packages selected")
 			}
 
+			// mark a single package to stream logs
+			if name := viper.GetString("stream-logs-for"); name != "" {
+				for _, pkg := range loaded {
+					if pkg.Name == name {
+						pkg.StreamLogs = true
+					}
+				}
+			}
+
+			// set up cache
 			fsCache, err := cache.NewFSCache(viper.GetString("cache"))
 			if err != nil {
 				logrus.WithField("error", err).Fatal("could not make cache")
@@ -57,16 +69,9 @@ var (
 				pkg.SetCache(fsCache)
 			}
 
-			packager := hammer.NewPackager(packages)
-
-			err = packager.EnsureOutputDir(viper.GetString("output"))
-			if err != nil {
-				logrus.WithField("error", err).Fatal("could not create output directory")
-			}
-
+			// handle interrupts so we can clean up nicely
 			ctx, cancel := context.WithCancel(context.Background())
 
-			// handle interrupts so we can clean up nicely
 			c := make(chan os.Signal, 1)
 			signal.Notify(c, os.Interrupt)
 			go func() {
@@ -82,6 +87,21 @@ var (
 				}
 			}()
 
+			// start packaging
+			packager := hammer.NewPackager(packages)
+
+			// create directories needed in the packaging process
+			err = packager.EnsureOutputDir(viper.GetString("output"))
+			if err != nil {
+				logrus.WithField("error", err).Fatal("could not create output directory")
+			}
+
+			err = packager.EnsureOutputDir(viper.GetString("logs"))
+			if err != nil {
+				logrus.WithError(err).Fatal("could not create logs directory")
+			}
+
+			// build the packages!
 			if !packager.Build(ctx, viper.GetInt("concurrent-jobs")) { // Errors are already reported to the user from here
 				os.Exit(1)
 			}

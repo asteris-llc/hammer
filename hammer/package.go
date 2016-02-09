@@ -3,16 +3,17 @@ package hammer
 import (
 	"bytes"
 	"fmt"
-	"github.com/Sirupsen/logrus"
-	"github.com/asteris-llc/hammer/hammer/cache"
-	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"runtime"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/asteris-llc/hammer/hammer/cache"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 // Target describes the output of a build. It has a source (Src) and a
@@ -66,10 +67,10 @@ type Package struct {
 
 	cache           cache.Cache
 	fpm             *FPM
-	logconsumer     LogConsumer
 	logger          *logrus.Entry
 	scriptLocations map[string]string
 	template        *Template
+	StreamLogs      bool `yaml:"-"`
 }
 
 // NewPackage sets up defaults for build machine information, the logger, and
@@ -152,7 +153,7 @@ func (p *Package) BuildAndPackage() error {
 		logger.Debugf("starting %s stage", stage.Name)
 		err := stage.Action()
 		if err != nil {
-			logger.WithField("error", err).Error("could not complete stage")
+			logger.WithError(err).Error("could not complete stage")
 			return err
 		}
 		logger.Infof("finished %s stage", stage.Name)
@@ -209,13 +210,6 @@ func (p *Package) Setup() error {
 		return err
 	}
 	p.fpm = fpm
-
-	// create a log consumer
-	consumer, err := NewFileConsumer(p.Name, p.LogRoot)
-	if err != nil {
-		return err
-	}
-	p.logconsumer = consumer
 
 	return nil
 }
@@ -307,44 +301,56 @@ func (p *Package) Build() error {
 	cmd.Dir = p.BuildRoot
 
 	// handle out and error
-	stdout, err := cmd.StdoutPipe()
+	logger, err := NewProcessLogger(cmd)
 	if err != nil {
-		p.logger.WithField("error", err).Error("could not read command stdout")
-		return err
-	}
-	go p.logconsumer.MustHandleStream("stdout", stdout)
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		p.logger.WithField("error", err).Error("could not read command stderr")
-		return err
-	}
-	go p.logconsumer.MustHandleStream("stderr", stderr)
-
-	err = cmd.Start()
-	if err != nil {
-		p.logger.WithField("error", err).Error("build script could not start")
+		p.logger.WithError(err).Error("could not start a process logger")
 		return err
 	}
 
-	err = cmd.Wait()
+	rollup, err := NewRollupConsumer(logger)
 	if err != nil {
-		stdout, err := p.logconsumer.Replay("stdout")
-		if err != nil {
-			p.logger.WithField("error", err).Error("build script exited and could not read stdout")
+		p.logger.WithError(err).Error("could not start a rollup log consumer")
+		return err
+	}
+
+	file, err := NewFileConsumer(logger, p.LogRoot, p.Name)
+	if err != nil {
+		p.logger.WithError(err).Error("could not start a file log consumer")
+		return err
+	}
+
+	if p.StreamLogs {
+		if err := StdIOConsumer(logger); err != nil {
+			p.logger.WithError(err).Error("could not start a stdio log consumer")
+			return err
 		}
+	}
 
-		stderr, err := p.logconsumer.Replay("stderr")
-		if err != nil {
-			p.logger.WithField("error", err).Error("build script exited and could not read stdout")
-		}
+	if err := logger.Start(); err != nil {
+		p.logger.WithError(err).Error("build script logger could not start")
+		return err
+	}
 
+	if err := cmd.Start(); err != nil {
+		p.logger.WithError(err).Error("build script could not start")
+		return err
+	}
+
+	if err := cmd.Wait(); err != nil {
 		p.logger.WithFields(logrus.Fields{
 			"error":  err,
-			"stdout": string(stdout),
-			"stderr": string(stderr),
+			"stdout": rollup.Out.String(),
+			"stderr": rollup.Err.String(),
 		}).Error("build script exited with a non-zero exit code")
 		return err
+	}
+
+	for {
+		err := file.Error()
+		if err == nil {
+			break
+		}
+		p.logger.WithError(err).Error("error writing logs to disk")
 	}
 
 	p.logger.WithFields(logrus.Fields{
