@@ -45,6 +45,7 @@ func init() {
 	buildCmd.Flags().String("output", path.Join(cwd, "out"), "where to place output packages")
 	buildCmd.Flags().String("logs", path.Join(cwd, "logs"), "where to place build logs")
 	buildCmd.Flags().String("cache", path.Join(cwd, ".hammer-cache"), "where to cache downloads")
+	buildCmd.Flags().Bool("skip-cleanup", false, "skip cleanup step")
 
 	for _, flags := range []*pflag.FlagSet{rootCmd.PersistentFlags(), buildCmd.Flags()} {
 		err := viper.BindPFlags(flags)
