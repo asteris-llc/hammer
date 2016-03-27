@@ -2,6 +2,7 @@ package hammer
 
 import (
 	"bytes"
+	"errors"
 	"io/ioutil"
 	"path"
 	"text/template"
@@ -24,6 +25,7 @@ func NewTemplate(pkg *Package) *Template {
 		"includeTemplate": t.IncludeTemplate,
 		"specFile":        t.SpecFile,
 		"top":             t.Top,
+		"variable":        t.Variable,
 	}
 
 	return t
@@ -95,4 +97,14 @@ func (t *Template) Top() *Package {
 	}
 
 	return p
+}
+
+// Variable inserts an extra variable that was passed into the template via the
+// spec.
+func (t *Template) Variable(name string) (string, error) {
+	value, ok := t.Package.Vars[name]
+	if !ok {
+		return "", errors.New("Undefined variable in template: " + name)
+	}
+	return value, nil
 }

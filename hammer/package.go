@@ -65,6 +65,8 @@ type Package struct {
 	// information about the machine doing the building
 	CPUs int `yaml:"-"`
 
+	// Extra variables that will be available to templates
+	Vars            map[string]string `yaml:"vars,omitempty"`
 	cache           cache.Cache
 	fpm             *FPM
 	logger          *logrus.Entry
