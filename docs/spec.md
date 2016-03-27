@@ -29,6 +29,10 @@ type Package struct {
     Version      string     // major.minor.patch, e.g. v0.1.5
 
     // ...
+
+	Vars         map[string]string // dict of extra vars available to templates
+
+    // ...
 }
 ```
 
@@ -81,6 +85,13 @@ targets:
 - src: "{{.SpecRoot}}/consul.sysconfig"
     dest: /etc/sysconfig/consul
     config: true
+
+# This dictionary isn't necessary because we're not templating any of the above
+# targets. If we were, we could include this in a template with the following
+# expression: {{variable "packagedBy"}}. Variables and variable names can be any
+# valid YAML string.
+# vars:
+#   packagedBy: 'username'
 
 # scripts for building and installing the package. The only required script is
 # "build", and "{before,after}-{install,remove,upgrade}" are available. You can
