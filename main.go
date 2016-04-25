@@ -12,7 +12,7 @@ import (
 )
 
 const Name = "hammer"
-const Version = "0.2"
+const Version = "1.0.0"
 
 var (
 	rootCmd = &cobra.Command{
