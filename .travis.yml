@@ -3,8 +3,8 @@ language: go
 
 # we support the most two recent releases, and (hopefully) the tip.
 go:
-  - 1.4
   - 1.5
+  - 1.6
   - tip
 
 install: go get -v -t ./...
