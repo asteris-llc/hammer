@@ -133,9 +133,15 @@ func (p *Package) SetCache(cache cache.Cache) {
 // cleanup.
 func (p *Package) BuildAndPackage() error {
 	defer func() {
-		err := p.Cleanup()
-		if err != nil {
-			p.logger.Warn("did not clean up successfully, there may be residual files in your system")
+		// TODO: remove the call to viper here in favor of having another piece
+		// of configuration in Package
+		if !viper.GetBool("skip-cleanup") {
+			err := p.Cleanup()
+			if err != nil {
+				p.logger.Warn("did not clean up successfully, there may be residual files in your system")
+			}
+		} else {
+			p.logger.Info("Flag --skip-cleanup was specified, skipping cleanup")
 		}
 	}()
 	type Stage struct {
