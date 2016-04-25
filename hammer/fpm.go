@@ -2,11 +2,12 @@ package hammer
 
 import (
 	"errors"
-	"github.com/Sirupsen/logrus"
-	shlex "github.com/anmitsu/go-shlex"
 	"io/ioutil"
 	"os/exec"
 	"path"
+
+	"github.com/Sirupsen/logrus"
+	shlex "github.com/anmitsu/go-shlex"
 )
 
 var (
@@ -172,6 +173,23 @@ func (f *FPM) setBaseOpts() error {
 			return err
 		}
 		opts = append(opts, newOpts...)
+	}
+
+	// set FPM's log level to match Hammer's
+	opts = append(opts, "--log")
+	switch logrus.GetLevel() {
+	case logrus.PanicLevel:
+		fallthrough
+	case logrus.FatalLevel:
+		fallthrough
+	case logrus.ErrorLevel:
+		opts = append(opts, "error")
+	case logrus.WarnLevel:
+		opts = append(opts, "warn")
+	case logrus.InfoLevel:
+		opts = append(opts, "info")
+	case logrus.DebugLevel:
+		opts = append(opts, "debug")
 	}
 
 	f.baseOpts = opts
