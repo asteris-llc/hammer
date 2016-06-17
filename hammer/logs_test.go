@@ -192,13 +192,17 @@ func TestFileConsumer(t *testing.T) {
 
 	files, err := ioutil.ReadDir(tempDir)
 	assert.NoError(t, err)
-	assert.Len(t, files, 1)
+	assert.Len(t, files, 2)
 
 	if len(files) > 0 {
-		assert.Contains(t, files[0].Name(), "stdout")
-
+		assert.Contains(t, files[0].Name(), "stderr")
 		_, err := ioutil.ReadFile(path.Join(tempDir, files[0].Name()))
 		assert.NoError(t, err)
 		// assert.Contains(t, string(content), "go") // TODO: this fails
+	}
+	if len(files) > 1 {
+		assert.Contains(t, files[1].Name(), "stdout")
+		_, err := ioutil.ReadFile(path.Join(tempDir, files[1].Name()))
+		assert.NoError(t, err)
 	}
 }
