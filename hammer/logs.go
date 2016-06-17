@@ -197,7 +197,7 @@ func NewFileConsumer(p *ProcessLogger, dest, name string) (*FileConsumer, error)
 	f := &FileConsumer{make(chan error)}
 
 	go f.handle(path.Join(dest, fmt.Sprintf("%s-%s-stdout.log", name, now)), stdout)
-	go f.handle(path.Join(dest, fmt.Sprintf("%s-%s-stdout.log", name, now)), stderr)
+	go f.handle(path.Join(dest, fmt.Sprintf("%s-%s-stderr.log", name, now)), stderr)
 
 	if err := f.Error(); err != nil {
 		return f, err
