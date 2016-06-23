@@ -25,6 +25,14 @@ type Target struct {
 	Config   bool   `yaml:"config"`
 }
 
+// Attr describes the permissions, Owner and Group for a file
+type Attr struct {
+	File  string `yaml:"file"`
+	Mode  string `yaml:"mode,omitempty"`
+	User  string `yaml:"user,omitempty"`
+	Group string `yaml:"group,omitempty"`
+}
+
 // Package is the main struct in Hammer. It contains all the (meta-)information
 // needed to produce a package.
 type Package struct {
@@ -33,6 +41,7 @@ type Package struct {
 	Description  string     `yaml:"description,omitempty"`
 	Epoch        string     `yaml:"epoch,omitempty"`
 	ExtraArgs    string     `yaml:"extra-args,omitempty"`
+	Attrs        []Attr     `yaml:"attrs,omitempty"`
 	Iteration    string     `yaml:"iteration,omitempty"`
 	License      string     `yaml:"license,omitempty"`
 	Name         string     `yaml:"name,omitempty"`
