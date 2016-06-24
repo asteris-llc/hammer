@@ -2,6 +2,7 @@ package hammer
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path"
@@ -165,6 +166,7 @@ func (f *FPM) setBaseOpts() error {
 		f.baseObsoletes,
 		f.baseScripts,
 		f.baseConfigs,
+		f.baseAttrs,
 	}
 
 	for _, source := range fieldSources {
@@ -313,6 +315,32 @@ func (f *FPM) baseConfigs() ([]string, error) {
 		}
 
 		opts = append(opts, "--config-files", dest.String())
+	}
+
+	return opts, nil
+}
+
+func (f *FPM) baseAttrs() ([]string, error) {
+	opts := []string{}
+
+	for _, attr := range f.Package.Attrs {
+		if attr.File == "" {
+			f.Package.logger.Debugf("Ignoring empty file")
+			continue
+		}
+
+		// Setting to '-' has FPM use the default values
+		if attr.Mode == "" {
+			attr.Mode = "-"
+		}
+		if attr.User == "" {
+			attr.User = "-"
+		}
+		if attr.Group == "" {
+			attr.Group = "-"
+		}
+
+		opts = append(opts, "--rpm-attr", fmt.Sprintf("%s,%s,%s:%s", attr.Mode, attr.User, attr.Group, attr.File))
 	}
 
 	return opts, nil

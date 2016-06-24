@@ -15,6 +15,7 @@ type Package struct {
     Description  string     // short package description
     Epoch        string     // strictly increasing package version
     ExtraArgs    string
+    Attrs        []Attr     // RPM File attributes (%attr)
     Iteration    string
     License      string     // package license, e.g. MIT, APLv2, BSD
     Name         string
@@ -127,6 +128,12 @@ after-remove: |
 after-upgrade: |
     systemctl reload-daemon
     systemctl restart consul.service
+
+attrs:
+  - file: /usr/bin/consul
+    mode: 755
+    user: consul
+    group: consul
 
 # extra options to FPM for building RPMs. Other package support (deb, for
 # example) is not currently supported but not terribly hard to add. Open an
