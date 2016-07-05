@@ -1,11 +1,12 @@
 package hammer
 
 import (
-	"github.com/Sirupsen/logrus"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 // Loader looks for Package specs in a given root.
@@ -31,7 +32,8 @@ func (l *Loader) Load() ([]*Package, error) {
 	packages := []*Package{}
 
 	err := filepath.Walk(l.Root, func(pathName string, info os.FileInfo, err error) error {
-		if info.IsDir() || info.Name() != l.Indicator {
+
+		if info == nil || info.IsDir() || info.Name() != l.Indicator {
 			return nil
 		}
 
