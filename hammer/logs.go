@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path"
 	"time"
 
 	"golang.org/x/net/context"
@@ -15,7 +16,7 @@ import (
 
 // ProcessLogger logs a given process
 type ProcessLogger struct {
-	sources      map[string]io.ReadCloser
+	sources      map[string]io.Reader
 	destinations map[string][]chan []byte
 
 	errors chan error
@@ -35,8 +36,14 @@ func NewProcessLogger(cmd *exec.Cmd) (*ProcessLogger, error) {
 	}
 
 	logger := &ProcessLogger{
-		sources:      map[string]io.ReadCloser{"out": stdout, "err": stderr},
-		destinations: map[string][]chan []byte{},
+		sources: map[string]io.Reader{
+			"out": stdout,
+			"err": stderr,
+		},
+		destinations: map[string][]chan []byte{
+			"out": []chan []byte{make(chan []byte)},
+			"err": []chan []byte{make(chan []byte)},
+		},
 
 		errors: make(chan error, 2),
 	}
@@ -48,14 +55,10 @@ func NewProcessLogger(cmd *exec.Cmd) (*ProcessLogger, error) {
 func (p *ProcessLogger) Subscribe() (stdout chan []byte, stderr chan []byte, err error) {
 	if p.cancel != nil {
 		return nil, nil, errors.New("already started")
+	} else if len(p.destinations["out"]) < 1 || len(p.destinations["err"]) < 1 {
+		return nil, nil, errors.New("not properly initialized")
 	}
-	stdout = make(chan []byte)
-	stderr = make(chan []byte)
-
-	p.destinations["out"] = append(p.destinations["out"], stdout)
-	p.destinations["err"] = append(p.destinations["err"], stderr)
-
-	return
+	return p.destinations["out"][0], p.destinations["err"][0], nil
 }
 
 // Start the process after subscribers are registered
@@ -77,6 +80,10 @@ func (p *ProcessLogger) Start() error {
 
 // Stop the process after the command is finished to clean up goroutines
 func (p *ProcessLogger) Stop() error {
+	if p == nil || p.cancel == nil {
+		return nil
+	}
+
 	p.cancel()
 
 	select {
@@ -87,7 +94,7 @@ func (p *ProcessLogger) Stop() error {
 	}
 }
 
-func (p *ProcessLogger) handle(ctx context.Context, name string, source io.ReadCloser) {
+func (p *ProcessLogger) handle(ctx context.Context, name string, source io.Reader) {
 	defer func() {
 		for _, dest := range p.destinations[name] {
 			close(dest)
@@ -124,6 +131,8 @@ func (p *ProcessLogger) handle(ctx context.Context, name string, source io.ReadC
 type RollupConsumer struct {
 	Out bytes.Buffer
 	Err bytes.Buffer
+
+	errors chan error
 }
 
 // NewRollupConsumer gets a new RollupConsumer
@@ -133,7 +142,7 @@ func NewRollupConsumer(p *ProcessLogger) (*RollupConsumer, error) {
 		return nil, err
 	}
 
-	r := new(RollupConsumer)
+	r := &RollupConsumer{errors: make(chan error)}
 	go r.handle(stdout, r.Out)
 	go r.handle(stderr, r.Err)
 
@@ -142,7 +151,9 @@ func NewRollupConsumer(p *ProcessLogger) (*RollupConsumer, error) {
 
 func (r *RollupConsumer) handle(src chan []byte, dest bytes.Buffer) {
 	for line := range src {
-		dest.Write(line)
+		if _, err := dest.Write(line); err != nil {
+			r.errors <- err
+		}
 	}
 }
 
@@ -171,23 +182,22 @@ type FileConsumer struct {
 }
 
 // NewFileConsumer starts a FileConsumer with the given options
-func NewFileConsumer(p *ProcessLogger, path, name string) (*FileConsumer, error) {
+func NewFileConsumer(p *ProcessLogger, dest, name string) (*FileConsumer, error) {
 	stdout, stderr, err := p.Subscribe()
 	if err != nil {
 		return nil, err
 	}
 
-	err = os.MkdirAll(path, os.ModeDir|0777)
-	if err != nil {
+	if err := os.MkdirAll(dest, os.ModeDir|0777); err != nil {
 		return nil, err
 	}
 
-	time := time.Now().Format(time.RFC3339)
+	now := time.Now().Format(time.RFC3339)
 
 	f := &FileConsumer{make(chan error)}
 
-	go f.handle(fmt.Sprintf("%s/%s-%s-stdout.log", path, name, time), stdout)
-	go f.handle(fmt.Sprintf("%s/%s-%s-stderr.log", path, name, time), stderr)
+	go f.handle(path.Join(dest, fmt.Sprintf("%s-%s-stdout.log", name, now)), stdout)
+	go f.handle(path.Join(dest, fmt.Sprintf("%s-%s-stderr.log", name, now)), stderr)
 
 	if err := f.Error(); err != nil {
 		return f, err
@@ -211,10 +221,16 @@ func (f *FileConsumer) handle(filename string, src chan []byte) {
 		f.errs <- err
 		return
 	}
-	defer file.Close()
+
+	// always close the file and handle the possible error
+	defer func(f *FileConsumer, file *os.File) {
+		if err := file.Close(); err != nil {
+			f.errs <- err
+		}
+	}(f, file)
 
 	for line := range src {
-		_, err = file.Write(line)
+		_, err = file.Write(append(line, []byte("\n")...))
 		if err != nil {
 			f.errs <- err
 			return
